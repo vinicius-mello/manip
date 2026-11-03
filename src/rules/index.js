@@ -1057,56 +1057,68 @@ function openName(ctx) {
   return { label: msg('step.open', { name: n.name }), action: { type: 'open', name: n.name } };
 }
 
+// Ordem do menu: por assunto (o cabeçalho de cada grupo vem de i18n
+// "group.<nome>"). As teclas são fixas; operações sem tecla própria são
+// alcançadas pelas setas ou pela busca (/).
+export const GROUPS = ['arith', 'structure', 'fractions', 'powers', 'complex', 'relation', 'names'];
+
 export const RULES = [
-  { id: 'calc', key: 'c', run: calculate },
-  { id: 'dist', key: 'd', run: distribute },
-  { id: 'factor', key: 'e', run: factorOut },
-  { id: 'cancel', key: 'x', run: cancel },
-  { id: 'neutral', key: 'n', run: neutral },
-  { id: 'signs', key: 'r', run: signs },
-  { id: 'parens', key: 'p', run: removeParens },
-  { id: 'wrap', key: '(', run: wrapParens },
-  { id: 'group', key: 'g', run: group },
-  { id: 'join', key: 'j', run: joinFractions },
-  { id: 'split', key: 'f', run: splitFraction },
-  { id: 'powers', key: 'o', run: powers },
-  { id: 'binomial', key: 'b', run: expandPower },
-  { id: 'asproduct', key: 'm', run: powerAsProduct },
-  { id: 'aspower', key: 'u', run: asPower },
-  { id: 'like', key: 'l', run: likeTerms },
-  { id: 'conj', key: 'z', run: conjugateProps },
-  { id: 'dconj', key: '~', run: doubleConjugate },
-  { id: 'conjprod', key: 'h', run: conjProduct },
-  { id: 'conjsum', key: 'v', run: conjSum },
-  { id: 'timesconj', key: 'y', run: timesConjugate },
-  { id: 'expand', key: 'k', run: expandName },
-  { id: 'open', key: 'w', run: openName },
+  // aritmética
+  { id: 'calc', key: 'c', group: 'arith', run: calculate },
+  { id: 'like', key: 'l', group: 'arith', run: likeTerms },
+  { id: 'cancel', key: 'x', group: 'arith', run: cancel },
+  { id: 'neutral', key: 'n', group: 'arith', run: neutral },
+  { id: 'signs', key: 'r', group: 'arith', run: signs },
+  // estrutura
+  { id: 'dist', key: 'd', group: 'structure', run: distribute },
+  { id: 'factor', key: 'e', group: 'structure', run: factorOut },
+  { id: 'wrap', key: '(', group: 'structure', run: wrapParens },
+  { id: 'parens', key: 'p', group: 'structure', run: removeParens },
+  { id: 'group', key: 'g', group: 'structure', run: group },
   {
-    id: 'addsub', key: 'q', run: addSubtract,
+    id: 'addsub', key: 'q', group: 'structure', run: addSubtract,
     input: true,
     available: (ctx) => ctx.targets.every((p) => !isRelation(getAt(ctx.tree, p).op)),
   },
   {
-    id: 'subst', key: 's', run: substitute,
+    id: 'subst', key: 's', group: 'structure', run: substitute,
     input: true,
     available: (ctx) => ctx.targets.length > 0,
   },
+  // frações
+  { id: 'join', key: 'j', group: 'fractions', run: joinFractions },
+  { id: 'split', key: 'f', group: 'fractions', run: splitFraction },
+  // potências
+  { id: 'powers', key: 'o', group: 'powers', run: powers },
+  { id: 'aspower', key: 'u', group: 'powers', run: asPower },
+  { id: 'asproduct', key: 'm', group: 'powers', run: powerAsProduct },
+  { id: 'binomial', key: 'b', group: 'powers', run: expandPower },
+  // complexos
+  { id: 'conj', key: 'z', group: 'complex', run: conjugateProps },
+  { id: 'dconj', key: '~', group: 'complex', run: doubleConjugate },
+  { id: 'conjprod', key: 'h', group: 'complex', run: conjProduct },
+  { id: 'conjsum', key: 'v', group: 'complex', run: conjSum },
+  { id: 'timesconj', key: 'y', group: 'complex', run: timesConjugate },
+  // equação e inequação
   {
-    id: 'name', key: 'a', run: nameIt,
-    input: true,
-    available: (ctx) => ctx.targets.length === 1 && !isRelation(getAt(ctx.tree, ctx.targets[0]).op),
-  },
-  {
-    id: 'sides', key: '=', run: bothSides,
+    id: 'sides', key: '=', group: 'relation', run: bothSides,
     input: true,
     available: (ctx) => isRelation(ctx.tree.op),
   },
+  { id: 'swap', key: 't', group: 'relation', run: swapSides },
   {
-    id: 'estimate', key: 'i', run: estimate,
+    id: 'estimate', key: 'i', group: 'relation', run: estimate,
     input: true,
     available: (ctx) => isRelation(ctx.tree.op) && ctx.tree.op !== 'NotEqual',
   },
-  { id: 'swap', key: 't', run: swapSides },
+  // nomes
+  {
+    id: 'name', key: 'a', group: 'names', run: nameIt,
+    input: true,
+    available: (ctx) => ctx.targets.length === 1 && !isRelation(getAt(ctx.tree, ctx.targets[0]).op),
+  },
+  { id: 'expand', key: 'k', group: 'names', run: expandName },
+  { id: 'open', key: 'w', group: 'names', run: openName },
 ];
 
 // Regras aplicáveis ao contexto, já com o resultado (prévia).

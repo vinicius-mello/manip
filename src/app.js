@@ -461,7 +461,18 @@ function load(text) {
 
 // ---------- menu de operações ----------
 
-let menu = null; // { items, index, input: bool, inputText }
+let menu = null; // { all, items, index, input: bool, inputText, query }
+
+// Busca sem acentos e sem maiúsculas: "potencia" acha "Potências".
+const plain = (s) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+function filterMenu() {
+  const q = plain(menu.query ?? '');
+  menu.items = q
+    ? menu.all.filter(({ rule }) => plain(t(`rule.${rule.id}`)).includes(q) || plain(t(`group.${rule.group}`)).includes(q))
+    : menu.all;
+  menu.index = Math.min(menu.index, Math.max(0, menu.items.length - 1));
+}
 
 function ruleContext(text) {
   const { tree } = state();
@@ -482,7 +493,7 @@ function openMenu(ruleId) {
     toast(t('toast.noOps'));
     return;
   }
-  menu = { items, index: direct, input: !!ruleId, inputText: '' };
+  menu = { all: items, items, index: direct, input: !!ruleId, inputText: '', query: null };
   drawMenu();
 }
 
@@ -507,11 +518,19 @@ function hintEl(text) {
 function drawMenu() {
   const { items, index } = menu;
   const list = document.createElement('ul');
+  let lastGroup = null;
   items.forEach(({ rule }, i) => {
+    if (rule.group !== lastGroup) {
+      lastGroup = rule.group;
+      const h = document.createElement('li');
+      h.className = 'menu-group';
+      h.textContent = t(`group.${rule.group}`);
+      list.append(h);
+    }
     const li = document.createElement('li');
-    li.className = i === index ? 'active' : '';
+    li.className = 'menu-item' + (i === index ? ' active' : '');
     const k = document.createElement('kbd');
-    k.textContent = rule.key;
+    k.textContent = rule.key ?? '·';
     li.append(k, t(`rule.${rule.id}`));
     li.addEventListener('mousemove', () => {
       if (menu.index !== i && !menu.input) { menu.index = i; drawMenu(); }
@@ -520,11 +539,43 @@ function drawMenu() {
     list.append(li);
   });
 
+  // Busca: "/" abre um campo que filtra as operações pelo nome.
+  const search = document.createElement('div');
+  search.className = 'menu-search';
+  if (menu.query !== null && !menu.input) {
+    const q = document.createElement('input');
+    q.className = 'menu-input';
+    q.placeholder = t('menu.search');
+    q.spellcheck = false;
+    q.value = menu.query;
+    q.addEventListener('input', () => { menu.query = q.value; menu.index = 0; filterMenu(); drawMenu(); });
+    q.addEventListener('keydown', (ev) => {
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'Enter') return menuKey(ev);
+      if (ev.key === 'Escape') {
+        menu.query = menu.query ? '' : null;
+        filterMenu();
+        drawMenu();
+        if (menu.query === null) menuEl.focus();
+        ev.preventDefault();
+      }
+      ev.stopPropagation();
+    });
+    search.append(q);
+  } else {
+    search.append(hintEl(t('menu.searchHint')));
+  }
+
   const box = document.createElement('div');
   box.className = 'menu-preview';
-  const { rule, result } = items[index];
-  menuEl.replaceChildren(list, box);
+  menuEl.replaceChildren(search, list, box);
   menuEl.hidden = false;
+  if (!items.length) {
+    box.append(hintEl(t('toast.noOps')));
+    positionMenu();
+    search.querySelector('input')?.focus();
+    return;
+  }
+  const { rule, result } = items[index];
 
   if (rule.input && menu.input) {
     const inp = document.createElement('input');
@@ -561,6 +612,8 @@ function drawMenu() {
   else box.append(hintEl(rule.input ? t('menu.enterToType') : result?.label ? fmt(result.label) : ''));
   box.querySelectorAll('.formula.mini').forEach((f) => fit(f, 320));
   positionMenu();
+  list.querySelector('.active')?.scrollIntoView({ block: 'nearest' });
+  search.querySelector('input')?.focus();
 }
 
 function updateInputPreview(box, text) {
@@ -615,9 +668,11 @@ function applyResult(r) {
 function menuKey(ev) {
   const k = ev.key;
   if (k === 'Escape') closeMenu();
+  else if (!menu.items.length) return;
   else if (k === 'ArrowDown') { menu.index = (menu.index + 1) % menu.items.length; drawMenu(); }
   else if (k === 'ArrowUp') { menu.index = (menu.index - 1 + menu.items.length) % menu.items.length; drawMenu(); }
   else if (k === 'Enter') choose(menu.index);
+  else if (k === '/') { menu.query = ''; drawMenu(); }
   else {
     const i = menu.items.findIndex(({ rule }) => rule.key === k.toLowerCase());
     if (i < 0) return;

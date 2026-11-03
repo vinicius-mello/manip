@@ -5,7 +5,7 @@ import { parseAscii } from '../src/parse-ascii.js';
 import { parseLatex } from '../src/parse-latex.js';
 import { toMathJson } from '../src/mathjson.js';
 import { toAscii } from '../src/serialize.js';
-import { RULES } from '../src/rules/index.js';
+import { RULES, GROUPS } from '../src/rules/index.js';
 
 test('textos com parâmetros nos dois idiomas', () => {
   setLang('pt');
@@ -24,11 +24,13 @@ test('toda regra tem nome (e textos de entrada) nos dois idiomas', () => {
     setLang(lang);
     for (const r of RULES) {
       assert.notEqual(t(`rule.${r.id}`), `rule.${r.id}`, `${lang}: rule.${r.id}`);
+      assert.ok(GROUPS.includes(r.group), `grupo de ${r.id}`);
       if (r.input) {
         assert.notEqual(t(`rule.${r.id}.ph`), `rule.${r.id}.ph`);
         assert.notEqual(t(`rule.${r.id}.hint`), `rule.${r.id}.hint`);
       }
     }
+    for (const g of GROUPS) assert.notEqual(t(`group.${g}`), `group.${g}`, `${lang}: group.${g}`);
   }
   setLang('pt');
 });

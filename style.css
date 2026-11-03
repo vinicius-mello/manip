@@ -470,7 +470,28 @@ body.kb-open #toast { bottom: calc(var(--kb-h, 300px) + 16px); }
   from { opacity: 0; transform: translateY(-4px) scale(.98); }
 }
 
-.menu ul { list-style: none; margin: 0; padding: 6px; }
+.menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 2px 6px 6px;
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+}
+
+.menu li.menu-group {
+  padding: 8px 10px 3px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: default;
+}
+
+.menu li.menu-group:hover { background: none; }
+
+.menu-search { padding: 8px 10px 0; }
+.menu-search .hint { font-size: 12px; color: var(--muted); }
 
 .menu li {
   display: flex;
