@@ -4,10 +4,16 @@
 
 import { FUNCTIONS, GREEK } from './ast.js';
 import { parseTokens, ParseError } from './parser.js';
+import { RELATION_INPUT } from './relations.js';
 
 const COMMANDS = {
   frac: 'frac', dfrac: 'frac', tfrac: 'frac', sqrt: 'sqrt',
   cdot: '*', times: '*', div: '/',
+};
+const RELATION_COMMANDS = {
+  le: 'LessEqual', leq: 'LessEqual', leqslant: 'LessEqual',
+  ge: 'GreaterEqual', geq: 'GreaterEqual', geqslant: 'GreaterEqual',
+  lt: 'Less', gt: 'Greater', ne: 'NotEqual', neq: 'NotEqual',
 };
 const SPACING = new Set(['quad', 'qquad', 'left', 'right', 'displaystyle', 'mathrm', 'mathit']);
 const CHARS = { '·': '*', '×': '*', '÷': '/', '−': '-' };
@@ -35,6 +41,7 @@ function tokenize(src) {
         continue;
       }
       if (COMMANDS[name]) push(COMMANDS[name], i);
+      else if (RELATION_COMMANDS[name]) push('rel', i, RELATION_COMMANDS[name]);
       else if (GREEK.includes(name)) push('id', i, name);
       else if (FUNCTIONS[name]) push('fn', i, FUNCTIONS[name]);
       else if (name === 'operatorname') {
@@ -75,7 +82,10 @@ function tokenize(src) {
     } else if (c === ']') {
       push(brackets.pop() ? ']' : ')', i);
       i++;
-    } else if ('+-*/^()=,{}'.includes(c) || CHARS[c]) {
+    } else if ((m = /^(<=|>=|[<>=≤≥≠])/.exec(src.slice(i)))) {
+      push('rel', i, RELATION_INPUT[m[0]]);
+      i += m[0].length;
+    } else if ('+-*/^(),{}'.includes(c) || CHARS[c]) {
       push(CHARS[c] ?? c, i);
       i++;
     } else {

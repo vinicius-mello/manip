@@ -1,7 +1,8 @@
 // Gramática comum aos parsers ASCII e LaTeX. Recebe uma lista de tokens
 // e devolve a árvore, sem simplificar nada:
 //   num, id, fn            números, símbolos, funções (v = operador MathJSON)
-//   + - * / ^ = ( ) ,      operadores e pontuação
+//   + - * / ^ ( ) ,        operadores e pontuação
+//   rel                    relação entre os lados (v = Equal, Less, ...)
 //   frac, sqrt, { } [ ]    construções do LaTeX
 // Parênteses digitados viram Delimiter, exceto onde a notação já mostra o
 // agrupamento (numerador/denominador, expoente, argumento de função).
@@ -130,9 +131,9 @@ export function parseTokens(toks) {
 
   const lhs = expr();
   let root = lhs;
-  if (peek().t === '=') {
-    next();
-    root = fn('Equal', lhs, expr());
+  if (peek().t === 'rel') {
+    const rel = next().v;
+    root = fn(rel, lhs, expr());
   }
   if (peek().t !== 'end') throw new ParseError('err.unexpected', peek().pos, { t: peek().t });
   return root;

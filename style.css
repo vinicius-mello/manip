@@ -511,6 +511,7 @@ kbd { min-width: 1.8em; }
 }
 
 .menu-preview .hint { color: var(--muted); font-size: 13px; }
+.menu-preview .hint.warn { color: var(--error); }
 
 .menu-input {
   width: 100%;
@@ -541,8 +542,8 @@ kbd { min-width: 1.8em; }
 /* Expressão longa quebrada em linhas: cada lado é uma linha flexível que
    quebra entre termos; as continuações ficam alinhadas depois do "=". */
 .formula.wrap { white-space: normal; }
-.formula.wrap > .Equal { display: flex; align-items: baseline; }
-.formula.wrap > .Equal > .Add,
+.formula.wrap > .relation { display: flex; align-items: baseline; }
+.formula.wrap > .relation > .Add,
 .formula.wrap > .Add {
   display: flex;
   flex-wrap: wrap;
@@ -550,13 +551,13 @@ kbd { min-width: 1.8em; }
   row-gap: .35em;
   min-width: 0;
 }
-.formula.wrap > .Equal > .Add > .chunk,
+.formula.wrap > .relation > .Add > .chunk,
 .formula.wrap > .Add > .chunk { display: inline-block; white-space: nowrap; }
-.formula.wrap > .Equal > .op.rel { flex: none; }
-.formula.wrap.stack > .Equal { flex-wrap: wrap; row-gap: .35em; }
-.formula.wrap.stack > .Equal > .n:first-child { flex: 1 1 100%; }
-.formula.wrap.stack > .Equal > .n:last-child { flex: 1 1 0; }
-.formula.wrap.stack > .Equal > .op.rel { margin-left: 0; }
+.formula.wrap > .relation > .op.rel { flex: none; }
+.formula.wrap.stack > .relation { flex-wrap: wrap; row-gap: .35em; }
+.formula.wrap.stack > .relation > .n:first-child { flex: 1 1 100%; }
+.formula.wrap.stack > .relation > .n:last-child { flex: 1 1 0; }
+.formula.wrap.stack > .relation > .op.rel { margin-left: 0; }
 
 /* Esmaecimento nas bordas quando há mais conteúdo fora da vista. */
 #stage.more-left, #stage.more-right, #stage.more-up, #stage.more-down {
@@ -710,7 +711,7 @@ kbd { min-width: 1.8em; }
 }
 
 .fname { display: inline-block; font-style: normal; margin: 0 .12em 0 .1em; }
-.func:first-child > .fname, .Equal > .func > .fname { margin-left: 0; }
+.func:first-child > .fname, .relation > .func > .fname { margin-left: 0; }
 
 /* Nomes colapsados: "chips" */
 .formula .n.chip {

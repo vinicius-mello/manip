@@ -124,6 +124,14 @@ const STRINGS = {
     'rule.sides.ph': 'ex.: + 3   − x   · 2   / (x + 1)   ^ 2',
     'rule.sides.hint': 'operador seguido de uma expressão',
     'rule.swap': 'Trocar os lados',
+    'rule.estimate': 'Estimar (≤, ≥, <, >)…',
+    'rule.estimate.ph': 'ex.: <= 2x + 1   (troca o lado direito)   0 <   (troca o esquerdo)',
+    'rule.estimate.hint': 'relação e expressão: “<= C” troca o lado direito, “C <=” o esquerdo',
+    'err.signUnknown': 'Numa inequação, só dá para multiplicar ou dividir por um número: o sinal de {e} é desconhecido',
+    'err.zero': 'Não dá para multiplicar ou dividir por zero',
+    'err.powerIneq': 'Elevar os dois lados de uma inequação a uma potência não é permitido',
+    'err.direction': 'Esse sentido não segue da desigualdade atual',
+    'step.estimate': 'estimou: {rel} {e}',
 
     // passos do histórico
     'step.input': 'entrada',
@@ -281,6 +289,14 @@ const STRINGS = {
     'rule.sides.ph': 'e.g. + 3   − x   · 2   / (x + 1)   ^ 2',
     'rule.sides.hint': 'an operator followed by an expression',
     'rule.swap': 'Swap sides',
+    'rule.estimate': 'Estimate (≤, ≥, <, >)…',
+    'rule.estimate.ph': 'e.g. <= 2x + 1   (replaces right side)   0 <   (replaces left side)',
+    'rule.estimate.hint': 'relation and expression: “<= C” replaces the right side, “C <=” the left',
+    'err.signUnknown': 'In an inequality you can only multiply or divide by a number: the sign of {e} is unknown',
+    'err.zero': 'You cannot multiply or divide by zero',
+    'err.powerIneq': 'Raising both sides of an inequality to a power is not allowed',
+    'err.direction': 'That direction does not follow from the current inequality',
+    'step.estimate': 'estimated: {rel} {e}',
 
     'step.input': 'input',
     'step.color': 'changed color',
@@ -337,9 +353,12 @@ const FUNCTION_LABELS = {
 
 const LANG_KEY = 'manip.lang';
 
+// Só no navegador: no Node (testes) não há armazenamento.
+const storage = () => (globalThis.document ? globalThis.localStorage : null);
+
 function detect() {
   try {
-    const saved = localStorage.getItem(LANG_KEY);
+    const saved = storage()?.getItem(LANG_KEY);
     if (saved in STRINGS) return saved;
   } catch { /* sem armazenamento */ }
   const nav = globalThis.navigator?.language ?? 'pt';
@@ -354,7 +373,7 @@ export const getLang = () => lang;
 export function setLang(next) {
   if (!(next in STRINGS) || next === lang) return;
   lang = next;
-  try { localStorage.setItem(LANG_KEY, next); } catch { /* sem armazenamento */ }
+  try { storage()?.setItem(LANG_KEY, next); } catch { /* sem armazenamento */ }
   if (globalThis.document) document.documentElement.lang = next === 'pt' ? 'pt-BR' : 'en';
   listeners.forEach((f) => f(lang));
 }

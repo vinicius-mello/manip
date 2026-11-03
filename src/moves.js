@@ -1,11 +1,15 @@
 // Movimentos com Shift+setas. Cada função recebe a árvore e o caminho do nó
 // em foco e devolve { tree, label, arc, focus } ou null se o movimento não se
-// aplica. `arc` é o id do nó que atravessou o sinal de igual (para a
+// aplica, ou { error, params } quando ele não é válido (ex.: dividir uma
+// inequação por algo de sinal desconhecido). `arc` é o id do nó que atravessou o sinal de igual (para a
 // animação) e `focus`, quando presente, é o id que deve receber o foco.
 // Nenhum movimento calcula nada: só reorganiza e insere operações.
 
 import { getAt, replaceAt, withArgs, fn, num } from './ast.js';
 import { msg } from './i18n.js';
+import { toAscii } from './serialize.js';
+import { evaluate } from './rules/arith.js';
+import { isRelation, isInequality, FLIP } from './relations.js';
 
 const terms = (n) => (n.op === 'Add' ? n.args : [n]);
 const factors = (n) => (n.op === 'Multiply' ? n.args : [n]);
@@ -33,9 +37,20 @@ function swap(tree, path, dir) {
   return { tree: replaceAt(tree, pp, withArgs(parent, args)), label: msg('step.reorder'), arc: null };
 }
 
+// Numa inequação, multiplicar ou dividir os dois lados por q só é válido
+// se q for um número diferente de zero; se for negativo, o sentido inverte.
+// Devolve a relação resultante, ou { error } explicando por que não pode.
+export function scaledRelation(op, q) {
+  if (!isInequality(op)) return { op };
+  const v = evaluate(q);
+  if (!v) return { error: 'err.signUnknown', params: { e: toAscii(q) } };
+  if (v.n === 0n) return { error: 'err.zero' };
+  return { op: v.n < 0n ? FLIP[op] : op, flipped: v.n < 0n };
+}
+
 // Passa um termo, fator ou denominador para o outro lado da equação.
 function transpose(tree, path, dir) {
-  if (tree.op !== 'Equal' || path.length === 0 || path.length > 2) return null;
+  if (!isRelation(tree.op) || path.length === 0 || path.length > 2) return null;
   const s = path[0];
   const o = 1 - s;
   if (dir !== (s === 0 ? +1 : -1)) return null;
@@ -47,11 +62,11 @@ function transpose(tree, path, dir) {
     const ts = terms(other);
     return rebuild('Add', s === 0 ? [t, ...ts] : [...ts, t], other);
   };
-  const build = (newSide, newOther, label, arc, focus = arc) => {
+  const build = (newSide, newOther, label, arc, focus = arc, rel = tree.op) => {
     const args = [];
     args[s] = newSide;
     args[o] = newOther;
-    return { tree: withArgs(tree, args), label, arc, focus };
+    return { tree: { ...tree, op: rel, args }, label, arc, focus, flipped: rel !== tree.op };
   };
 
   if (path.length === 1) {
@@ -68,13 +83,17 @@ function transpose(tree, path, dir) {
       return build(rebuild('Add', rest, side), insertTerm(moved), msg('step.transposeTerm'), core(node).id, moved.id);
     }
     case 'Multiply': {
+      const rel = scaledRelation(tree.op, node);
+      if (rel.error) return rel;
       const rest = side.args.filter((_, k) => k !== i);
-      return build(rebuild('Multiply', rest, side), fn('Divide', other, node), msg('step.transposeFactor'), node.id);
+      return build(rebuild('Multiply', rest, side), fn('Divide', other, node), msg('step.transposeFactor'), node.id, node.id, rel.op);
     }
     case 'Divide': {
       if (i !== 1) return null;
+      const rel = scaledRelation(tree.op, node);
+      if (rel.error) return rel;
       const newOther = rebuild('Multiply', [...factors(other), node], other);
-      return build(side.args[0], newOther, msg('step.transposeDen'), node.id);
+      return build(side.args[0], newOther, msg('step.transposeDen'), node.id, node.id, rel.op);
     }
     default:
       return null;

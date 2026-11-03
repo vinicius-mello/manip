@@ -2,6 +2,7 @@
 
 import { FUNCTION_NAMES, GREEK } from './ast.js';
 import { needsParens, needsDot, isFunctionOp } from './notation.js';
+import { ASCII_RELATIONS, LATEX_RELATIONS } from './relations.js';
 
 const asciiAtomic = (n) => n.op === 'Number' || n.op === 'Symbol' || n.op === 'Delimiter';
 
@@ -14,7 +15,8 @@ export function toAscii(n) {
   switch (n.op) {
     case 'Number': return n.value;
     case 'Symbol': return n.name;
-    case 'Equal': return `${toAscii(n.args[0])} = ${toAscii(n.args[1])}`;
+    case 'Equal': case 'NotEqual': case 'Less': case 'LessEqual': case 'Greater': case 'GreaterEqual':
+      return `${toAscii(n.args[0])} ${ASCII_RELATIONS[n.op]} ${toAscii(n.args[1])}`;
     case 'Add':
       return n.args.map((c, i) => {
         if (i > 0 && c.op === 'Negate') return ' - ' + toAscii(c).slice(1);
@@ -51,7 +53,8 @@ export function toLatex(n) {
   switch (n.op) {
     case 'Number': return n.value;
     case 'Symbol': return latexSymbol(n.name);
-    case 'Equal': return `${toLatex(n.args[0])} = ${toLatex(n.args[1])}`;
+    case 'Equal': case 'NotEqual': case 'Less': case 'LessEqual': case 'Greater': case 'GreaterEqual':
+      return `${toLatex(n.args[0])} ${LATEX_RELATIONS[n.op]} ${toLatex(n.args[1])}`;
     case 'Add':
       return n.args.map((c, i) => {
         if (i > 0 && c.op === 'Negate') return ' - ' + toLatex(c).slice(1);

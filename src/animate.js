@@ -143,6 +143,19 @@ export function play({ stage, oldRoot, oldRects, newRoot, arcKey, duration, hint
       g.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(.6)' }], { duration: duration * 0.5, easing: 'ease-in', fill: 'forwards' });
     }
   }
+  // A desigualdade inverteu (multiplicou por negativo, trocou os lados): o
+  // símbolo gira e pisca na cor de destaque.
+  if (hints.flip) {
+    newRoot.querySelector('.relation > .op.rel')?.animate(
+      [
+        { transform: 'rotateY(180deg) scale(1.3)', color: 'var(--accent)' },
+        { transform: 'rotateY(90deg) scale(1.3)', color: 'var(--accent)', offset: 0.5 },
+        { transform: 'none' },
+      ],
+      { duration: duration * 1.2, easing: EASE },
+    );
+  }
+
   if (layer.childElementCount) {
     stage.append(layer);
     setTimeout(() => layer.remove(), duration);

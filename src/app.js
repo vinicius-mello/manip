@@ -16,6 +16,7 @@ import { shiftSideways, shiftOut, shiftIn } from './moves.js';
 import { History } from './history.js';
 import { applicable } from './rules/index.js';
 import { createKeyboard } from './keyboard.js';
+import { isRelation, LATEX_RELATIONS } from './relations.js';
 import { t, msg, fmt, LANGS, getLang, setLang, onLangChange, translateDom } from './i18n.js';
 
 const COLORS = 6;
@@ -126,14 +127,14 @@ function fit(root, width, height = Infinity) {
 //      tamanho (até o mínimo) que caiba na altura;
 //   4. no mínimo legível, com rolagem (modo "rolar", ou termo grande demais).
 const MIN_READABLE = 26;
-const WRAPPABLE = ':scope > .Equal > .Add, :scope > .Add';
+const WRAPPABLE = ':scope > .relation > .Add, :scope > .Add';
 
 function fitMain(root) {
   const width = stageWidth();
   const height = availableHeight();
   root.classList.remove('wrap', 'stack');
   root.style.maxWidth = '';
-  root.querySelectorAll(':scope > .Equal > .n').forEach((e) => { e.style.flexShrink = ''; });
+  root.querySelectorAll(':scope > .relation > .n').forEach((e) => { e.style.flexShrink = ''; });
   root.style.fontSize = '';
   const base = parseFloat(getComputedStyle(root).fontSize) * zoom;
   const min = Math.min(base, Math.max(MIN_READABLE, base * 0.55));
@@ -153,7 +154,7 @@ function fitMain(root) {
     // longo quebra ao lado dele. Com os dois longos, o "= lado direito"
     // desce para baixo do lado esquerdo (.stack).
     setSize(min);
-    const sides = [...root.querySelectorAll(':scope > .Equal > .n')];
+    const sides = [...root.querySelectorAll(':scope > .relation > .n')];
     const natural = sides.map((e) => e.getBoundingClientRect().width / min);
     root.classList.add('wrap');
     root.style.maxWidth = `${width}px`;
@@ -368,8 +369,12 @@ function setFocus(path) {
 function move(f, ...args) {
   const r = f(state().tree, focusPath(), ...args);
   if (!r) return bump();
+  if (r.error) {
+    toast(t(r.error, r.params));
+    return bump();
+  }
   selected.clear();
-  commit(r.tree, r.label, r.focus ?? state().focusId, r.arc);
+  commit(r.tree, r.label, r.focus ?? state().focusId, r.arc, r.flipped ? { flip: true } : undefined);
 }
 
 // Shift+←/→: seleção contígua entre irmãos, da âncora até o foco (como em
@@ -533,7 +538,8 @@ function drawMenu() {
     inp.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') {
         const r = rule.run(ruleContext(inp.value));
-        if (r) { closeMenu(); applyResult(r); }
+        if (r?.error) { toast(t(r.error, r.params)); bump(); }
+        else if (r) { closeMenu(); applyResult(r); }
         else bump();
       } else if (ev.key === 'Escape') {
         menu.input = false;
@@ -560,7 +566,9 @@ function updateInputPreview(box, text) {
   box.querySelector('.formula, .hint')?.remove();
   const { rule } = menu.items[menu.index];
   const r = text.trim() ? rule.run(ruleContext(text)) : null;
-  box.append(r?.tree ? staticFormula(r.tree) : hintEl(t(`rule.${rule.id}.hint`)));
+  if (r?.tree) box.append(staticFormula(r.tree));
+  else if (r?.error) box.append(Object.assign(hintEl(t(r.error, r.params)), { className: 'hint warn' }));
+  else box.append(hintEl(t(`rule.${rule.id}.hint`)));
   box.querySelectorAll('.formula.mini').forEach((f) => fit(f, 320));
 }
 
@@ -674,7 +682,9 @@ function stepsLatex() {
   const lines = [];
   for (const s of history().steps.slice(0, history().index + 1)) {
     const t = s.tree;
-    const line = t.op === 'Equal' ? `${toLatex(t.args[0])} &= ${toLatex(t.args[1])}` : `&${toLatex(t)}`;
+    const line = isRelation(t.op)
+      ? `${toLatex(t.args[0])} &${LATEX_RELATIONS[t.op]} ${toLatex(t.args[1])}`
+      : `&${toLatex(t)}`;
     if (lines[lines.length - 1] !== line) lines.push(line);
   }
   return `\\begin{aligned}\n${lines.join(' \\\\\n')}\n\\end{aligned}`;

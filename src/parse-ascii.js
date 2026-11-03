@@ -4,6 +4,7 @@
 
 import { FUNCTIONS, GREEK } from './ast.js';
 import { parseTokens, ParseError } from './parser.js';
+import { RELATION_INPUT } from './relations.js';
 
 export { ParseError };
 
@@ -19,7 +20,9 @@ function tokenize(src) {
       toks.push({ t: 'num', v: m[0], pos: i });
     } else if ((m = /^[A-Za-z]+(_(\d+|[A-Za-z]))?/.exec(rest))) {
       splitWord(m[0], i, toks);
-    } else if ('+-*/^()=,·×÷−'.includes(c)) {
+    } else if ((m = /^(<=|>=|!=|[<>=≤≥≠])/.exec(rest))) {
+      toks.push({ t: 'rel', v: RELATION_INPUT[m[0]], pos: i });
+    } else if ('+-*/^(),·×÷−'.includes(c)) {
       const v = { '·': '*', '×': '*', '÷': '/', '−': '-' }[c] ?? c;
       toks.push({ t: v, pos: i });
       m = [c];

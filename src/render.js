@@ -7,6 +7,7 @@
 import { GREEK, FUNCTION_NAMES } from './ast.js';
 import { needsParens, needsDot } from './notation.js';
 import { functionLabel } from './i18n.js';
+import { RELATIONS } from './relations.js';
 
 const GREEK_CHARS = {
   alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', zeta: 'ζ', eta: 'η',
@@ -74,8 +75,10 @@ export function render(n, parent = null, index = 0) {
       e.append(...symbolContent(n.name));
       if (n.named) e.classList.add('chip');
       break;
-    case 'Equal':
-      e.append(kid(n.args[0], 0), op('=', n.id + '=', 'rel'), kid(n.args[1], 1));
+    case 'Equal': case 'NotEqual': case 'Less': case 'LessEqual': case 'Greater': case 'GreaterEqual':
+      // A chave do símbolo não depende da relação: trocar < por > anima.
+      e.classList.add('relation');
+      e.append(kid(n.args[0], 0), op(RELATIONS[n.op], n.id + '=', 'rel'), kid(n.args[1], 1));
       break;
     case 'Add':
       // Cada termo fica junto do seu sinal num "chunk": é por eles que uma

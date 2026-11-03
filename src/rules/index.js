@@ -21,6 +21,8 @@ import { needsParens } from '../notation.js';
 import { parseInput } from '../input.js';
 import { toAscii } from '../serialize.js';
 import { msg } from '../i18n.js';
+import { isRelation, FLIP, direction, RELATIONS, RELATION_INPUT } from '../relations.js';
+import { scaledRelation } from '../moves.js';
 import { evaluate, ratToNode } from './arith.js';
 import {
   terms, factors, unparen, signed, parentPath, lastIndex, parentOf,
@@ -361,7 +363,7 @@ function wrapParens(ctx) {
   let focus = null;
   for (const p of [...targets].reverse()) {
     const n = getAt(t2, p);
-    if (n.op === 'Equal') return null;
+    if (isRelation(n.op)) return null;
     const d = fn('Delimiter', n);
     focus = d.id;
     t2 = replaceAt(t2, p, d);
@@ -708,11 +710,11 @@ const BOTH_SIDES = {
   '^': (side, e) => fn('Power', side, e),
 };
 
-// Expressão digitada (ASCII ou LaTeX), sem sinal de igual.
+// Expressão digitada (ASCII ou LaTeX), sem relação (=, <, ≤...).
 function parseExpr(text) {
   try {
     const e = parseInput(text ?? '');
-    return e.op === 'Equal' ? null : e;
+    return isRelation(e.op) ? null : e;
   } catch {
     return null;
   }
@@ -727,23 +729,70 @@ export function parseSidesInput(text) {
   return e && { op, e };
 }
 
+// Numa inequação: somar e subtrair mantêm o sentido; multiplicar e dividir
+// exigem um número (negativo inverte); potência não é permitida.
 function bothSides(ctx) {
   const { tree } = ctx;
-  if (tree.op !== 'Equal') return null;
+  if (!isRelation(tree.op)) return null;
   const parsed = parseSidesInput(ctx.input);
   if (!parsed) return null;
   const { op, e } = parsed;
+  let rel = { op: tree.op };
+  if (op === '*' || op === '/') rel = scaledRelation(tree.op, e);
+  else if (op === '^' && tree.op !== 'Equal') rel = { error: 'err.powerIneq' };
+  if (rel.error) return rel;
   const clones = {};
   const e2 = cloneFrom(e, clones);
   const sides = [BOTH_SIDES[op](tree.args[0], e), BOTH_SIDES[op](tree.args[1], e2)];
   const sym = { '*': '·', '/': '÷', '-': '−' }[op] ?? op;
-  return { tree: withArgs(tree, sides), label: msg('step.sides', { op: sym, e: toAscii(e) }) };
+  return {
+    tree: { ...tree, op: rel.op, args: sides },
+    label: msg('step.sides', { op: sym, e: toAscii(e) }),
+    hints: rel.flipped ? { flip: true } : undefined,
+  };
 }
 
+// Trocar os lados de uma inequação inverte o símbolo: a < b ⇔ b > a.
 function swapSides(ctx) {
   const { tree } = ctx;
-  if (tree.op !== 'Equal') return null;
-  return { tree: withArgs(tree, [tree.args[1], tree.args[0]]), label: msg('step.swap') };
+  if (!isRelation(tree.op)) return null;
+  return {
+    tree: { ...tree, op: FLIP[tree.op], args: [tree.args[1], tree.args[0]] },
+    label: msg('step.swap'),
+    hints: tree.op !== FLIP[tree.op] ? { flip: true } : undefined,
+  };
+}
+
+// ---------------------------------------------------------------- estimar
+
+// A = B → A ≤ C (o usuário garante B ≤ C), escrito "<= C"; ou C ≤ B
+// (garante C ≤ A), escrito "C <=". De uma igualdade sai qualquer sentido;
+// de uma desigualdade, só o mesmo sentido (transitividade).
+const REL_RE = '(<=|>=|[<>≤≥])';
+
+export function parseEstimateInput(text) {
+  const t = text ?? '';
+  let m = new RegExp(`^\\s*${REL_RE}\\s*(.+)$`).exec(t);
+  if (m) return { side: 1, op: RELATION_INPUT[m[1]], e: parseExpr(m[2]) };
+  m = new RegExp(`^(.+?)\\s*${REL_RE}\\s*$`).exec(t);
+  if (m) return { side: 0, op: RELATION_INPUT[m[2]], e: parseExpr(m[1]) };
+  return null;
+}
+
+function estimate(ctx) {
+  const { tree } = ctx;
+  if (!isRelation(tree.op) || tree.op === 'NotEqual') return null;
+  const parsed = parseEstimateInput(ctx.input);
+  if (!parsed?.e) return null;
+  const { side, op, e } = parsed;
+  if (tree.op !== 'Equal' && direction(tree.op) !== direction(op)) return { error: 'err.direction' };
+  const args = tree.args.slice();
+  args[side] = e;
+  return {
+    tree: { ...tree, op, args },
+    label: msg('step.estimate', { rel: RELATIONS[op], e: toAscii(e) }),
+    focus: e.id,
+  };
 }
 
 // ------------------------------------------------------------ substituir
@@ -790,7 +839,7 @@ function addSubtract(ctx) {
 
   const p = targets[0];
   const n = getAt(tree, p);
-  if (n.op === 'Equal') return null;
+  if (isRelation(n.op)) return null;
   const parent = parentOf(tree, p);
   let t2;
   if (n.op === 'Add') {
@@ -816,7 +865,7 @@ function nameIt(ctx) {
   const name = (ctx.input ?? '').trim();
   if (!NAME_RE.test(name) || ctx.definitions?.[name]) return null;
   const n = getAt(tree, targets[0]);
-  if (n.op === 'Equal' || isNamed(n)) return null;
+  if (isRelation(n.op) || isNamed(n)) return null;
   const chip = { ...sym(name), named: true };
   return {
     tree: replaceAt(tree, targets[0], chip),
@@ -863,7 +912,7 @@ export const RULES = [
   {
     id: 'addsub', key: 'q', run: addSubtract,
     input: true,
-    available: (ctx) => ctx.targets.every((p) => getAt(ctx.tree, p).op !== 'Equal'),
+    available: (ctx) => ctx.targets.every((p) => !isRelation(getAt(ctx.tree, p).op)),
   },
   {
     id: 'subst', key: 's', run: substitute,
@@ -873,12 +922,17 @@ export const RULES = [
   {
     id: 'name', key: 'a', run: nameIt,
     input: true,
-    available: (ctx) => ctx.targets.length === 1 && getAt(ctx.tree, ctx.targets[0]).op !== 'Equal',
+    available: (ctx) => ctx.targets.length === 1 && !isRelation(getAt(ctx.tree, ctx.targets[0]).op),
   },
   {
     id: 'sides', key: '=', run: bothSides,
     input: true,
-    available: (ctx) => ctx.tree.op === 'Equal',
+    available: (ctx) => isRelation(ctx.tree.op),
+  },
+  {
+    id: 'estimate', key: 'i', run: estimate,
+    input: true,
+    available: (ctx) => isRelation(ctx.tree.op) && ctx.tree.op !== 'NotEqual',
   },
   { id: 'swap', key: 't', run: swapSides },
 ];
