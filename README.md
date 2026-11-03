@@ -23,22 +23,34 @@ uma escolha explícita, com animação, e fica registrado no histórico.
 - Exportação em LaTeX (passos em `aligned`), MathJSON e arquivo `.json`.
 - Português e inglês; temas claro, escuro, quadro verde, papel e alto contraste.
 
-## Principais teclas
+## Teclas
+
+As teclas seguem a ideia de um editor modal: **minúsculas, dígitos e símbolos
+aplicam operações direto na fórmula** (as mesmas teclas valem no menu do Enter),
+e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atalhos.
 
 | Tecla | Ação |
 |---|---|
 | ← → ↑ ↓ | navegar pela expressão |
-| Ctrl + ← → | mover o termo / passar para o outro lado |
+| Ctrl + ← → / ↑ ↓ | mover o termo, passar para o outro lado / sair ou entrar no grupo |
 | Shift + ← → | selecionar termos vizinhos |
-| Espaço | selecionar |
-| Enter | operações (`/` busca pelo nome) |
-| ( | pôr entre parênteses |
-| > | num sistema, substituir a variável isolada (`v = …`) nas outras equações |
-| S · N · O | substituir · dar nome · nota do passo |
-| Ctrl + Z | desfazer |
+| Espaço · Esc | selecionar · limpar a seleção |
+| Enter | menu de operações (com prévia; `/` busca pelo nome) |
+| Ctrl + Z · Ctrl + Shift + Z | desfazer · refazer |
 | PgUp PgDn Home End | percorrer os passos |
-| P · K | apresentação · teclado na tela |
-| ? | todos os atalhos |
+
+**Operações:**
+`c` calcular · `l` termos semelhantes · `x` cancelar · `0` elemento neutro · `r` regra de sinais ·
+`d` distribuir · `e` pôr em evidência · `(` pôr entre parênteses · `p` remover parênteses · `g` agrupar ·
+`q` somar e subtrair… · `s` substituir… · `j` juntar frações · `f` separar fração ·
+`o` propriedades de potências · `u` escrever como potência · `m` potência como produto · `b` binômio ·
+`2` produto notável · `z` conjugado · `~` z ↔ z̄̄ · `h` z·z̄ ↔ |z|² · `v` z ± z̄ · `y` multiplicar pelo conjugado ·
+`=` operar nos dois lados… · `t` trocar os lados · `i` estimar… · `+` `-` somar/subtrair equações ·
+`>` substituir a variável isolada · `n` dar nome… · `k` expandir nome · `w` abrir área de trabalho
+
+**Comandos:**
+`C` cor · `E` editar · `L` copiar LaTeX · `P` apresentação · `K` teclado na tela · `O` nota do passo ·
+`R` gravar vídeo · `[` `]` `\` tamanho da fórmula · `?` atalhos
 
 ## Desenvolvimento
 

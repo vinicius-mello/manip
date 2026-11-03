@@ -46,3 +46,13 @@ test('grafias brasileiras de funções', () => {
   assert.equal(functionLabel('Sin', 'sin'), 'sin');
   setLang('pt');
 });
+
+test('teclas das operações: únicas, sem maiúsculas (reservadas aos comandos)', () => {
+  const keys = RULES.map((r) => r.key);
+  assert.equal(new Set(keys).size, keys.length, 'teclas repetidas');
+  for (const k of keys) {
+    assert.equal(k.length, 1, `tecla de um caractere: ${k}`);
+    assert.ok(!/[A-Z]/.test(k), `maiúscula ${k} é comando`);
+    assert.ok(!['[', ']', '\\', '?', ' ', '/'].includes(k), `tecla ${k} é de comando`);
+  }
+});
