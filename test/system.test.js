@@ -47,4 +47,5 @@ test('substituir a variável nas outras equações', () => {
   assert.equal(run('substsys', 'y = 2x + 1; x + y = 7', [0, 1]), 'y = 2x + 1; x + (2x + 1) = 7', 'foco dentro da equação');
   assert.equal(run('substsys', '3 = x; x y = 6; x + y = 5', [0]), '3 = x; 3y = 6; 3 + y = 5');
   assert.equal(run('substsys', 'x + y = 7; x - y = 1', [0]), null, 'não é v = expressão');
+  assert.equal(run('substsys', 'y = 2x + 1; x = 3', [0]), 'err.varAbsent', 'y não aparece nas outras');
 });

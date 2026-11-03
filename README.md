@@ -32,6 +32,7 @@ uma escolha explícita, com animação, e fica registrado no histórico.
 | Espaço | selecionar |
 | Enter | operações (`/` busca pelo nome) |
 | ( | pôr entre parênteses |
+| > | num sistema, substituir a variável isolada (`v = …`) nas outras equações |
 | S · N · O | substituir · dar nome · nota do passo |
 | Ctrl + Z | desfazer |
 | PgUp PgDn Home End | percorrer os passos |
