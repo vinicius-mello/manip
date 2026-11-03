@@ -38,7 +38,8 @@ function tokenize(src) {
         const ch = src[i + 1];
         if (ch === '{') push('(', i);
         else if (ch === '}') push(')', i);
-        else if (ch === '\\' || ',;:! '.includes(ch)) { /* espaçamento ou quebra */ }
+        else if (ch === '\\') push(';', i); // quebra de linha: próxima equação do sistema
+        else if (',;:! '.includes(ch)) { /* espaçamento */ }
         else throw new ParseError('err.unknownCmd', i, { name: ch ?? '' });
         i += 2;
         continue;
@@ -54,6 +55,11 @@ function tokenize(src) {
         if (!op || !FUNCTIONS[op[1]]) throw new ParseError('err.unknownFn', i);
         push('fn', i, FUNCTIONS[op[1]]);
         i += 13 + op[0].length;
+        continue;
+      } else if (name === 'begin' || name === 'end') {
+        // \begin{cases} ... \end{cases} (e aligned, array...): só o conteúdo importa
+        const env = /^\{[A-Za-z*]+\}/.exec(src.slice(i + 1 + name.length));
+        i += 1 + name.length + (env ? env[0].length : 0);
         continue;
       } else if (!SPACING.has(name)) throw new ParseError('err.unknownCmd', i, { name });
       if (name === 'left' || name === 'right') {

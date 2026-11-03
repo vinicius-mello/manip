@@ -146,7 +146,9 @@ export function play({ stage, oldRoot, oldRects, newRoot, arcKey, duration, hint
   // A desigualdade inverteu (multiplicou por negativo, trocou os lados): o
   // símbolo gira e pisca na cor de destaque.
   if (hints.flip) {
-    newRoot.querySelector('.relation > .op.rel')?.animate(
+    // flip: id da relação (num sistema, qual das equações); true em arquivos antigos
+    const sel = hints.flip === true ? '.relation > .op.rel' : `[data-key="${hints.flip}="]`;
+    newRoot.querySelector(sel)?.animate(
       [
         { transform: 'rotateY(180deg) scale(1.3)', color: 'var(--accent)' },
         { transform: 'rotateY(90deg) scale(1.3)', color: 'var(--accent)', offset: 0.5 },

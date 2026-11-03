@@ -22,7 +22,7 @@ function tokenize(src) {
       splitWord(m[0], i, toks);
     } else if ((m = /^(<=|>=|!=|[<>=≤≥≠])/.exec(rest))) {
       toks.push({ t: 'rel', v: RELATION_INPUT[m[0]], pos: i });
-    } else if ('+-*/^(),|·×÷−'.includes(c)) {
+    } else if ('+-*/^(),|;·×÷−'.includes(c)) {
       const v = { '·': '*', '×': '*', '÷': '/', '−': '-' }[c] ?? c;
       toks.push({ t: v, pos: i });
       m = [c];

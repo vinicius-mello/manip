@@ -739,6 +739,32 @@ kbd { min-width: 1.8em; }
 
 .imag { font-style: normal; padding: 0 .02em; }
 
+/* Sistema de equações: chave à esquerda e "=" alinhados entre as linhas */
+.formula .n.System { position: relative; padding-left: .55em; }
+.System > .brace {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: .45em;
+  fill: currentColor;
+}
+.System > .rows {
+  display: inline-grid;
+  grid-template-columns: auto auto auto;
+  row-gap: .3em;
+  vertical-align: middle;
+  padding: .1em 0;
+}
+.System > .rows > .relation {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+}
+.System > .rows > .relation > .n:first-child { justify-self: end; }
+.System > .rows > .relation > .n:last-child { justify-self: start; }
+
 /* Conjugado: barra sobre o argumento. A margem lateral separa barras
    vizinhas: z̄·w̄ não pode parecer o conjugado de zw. */
 .formula .n.Conjugate { margin: 0 .05em; }

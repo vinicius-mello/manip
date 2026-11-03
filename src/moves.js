@@ -9,7 +9,7 @@ import { getAt, replaceAt, withArgs, fn, num } from './ast.js';
 import { msg } from './i18n.js';
 import { toAscii } from './serialize.js';
 import { evaluate } from './rules/arith.js';
-import { isRelation, isInequality, FLIP } from './relations.js';
+import { isRelation, isInequality, FLIP, relationAt } from './relations.js';
 
 const terms = (n) => (n.op === 'Add' ? n.args : [n]);
 const factors = (n) => (n.op === 'Multiply' ? n.args : [n]);
@@ -28,7 +28,8 @@ const core = (t) => (t.op === 'Negate' ? t.args[0] : t);
 function swap(tree, path, dir) {
   const pp = path.slice(0, -1);
   const parent = getAt(tree, pp);
-  if (!parent || (parent.op !== 'Add' && parent.op !== 'Multiply')) return null;
+  // Termos de soma, fatores de produto ou equações de um sistema.
+  if (!parent || (parent.op !== 'Add' && parent.op !== 'Multiply' && parent.op !== 'System')) return null;
   const i = path[path.length - 1];
   const j = i + dir;
   if (j < 0 || j >= parent.args.length) return null;
@@ -48,8 +49,17 @@ export function scaledRelation(op, q) {
   return { op: v.n < 0n ? FLIP[op] : op, flipped: v.n < 0n };
 }
 
-// Passa um termo, fator ou denominador para o outro lado da equação.
+// Passa um termo, fator ou denominador para o outro lado da equação (num
+// sistema, dentro da equação em que ele está).
 function transpose(tree, path, dir) {
+  const r = relationAt(tree, path);
+  if (!r) return null;
+  const res = transposeIn(r.rel, path.slice(r.rp.length), dir);
+  if (!res?.tree) return res;
+  return { ...res, tree: replaceAt(tree, r.rp, res.tree), relId: res.tree.id };
+}
+
+function transposeIn(tree, path, dir) {
   if (!isRelation(tree.op) || path.length === 0 || path.length > 2) return null;
   const s = path[0];
   const o = 1 - s;

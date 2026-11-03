@@ -21,7 +21,7 @@ import { needsParens } from '../notation.js';
 import { parseInput } from '../input.js';
 import { toAscii } from '../serialize.js';
 import { msg } from '../i18n.js';
-import { isRelation, FLIP, direction, RELATIONS, RELATION_INPUT } from '../relations.js';
+import { isRelation, FLIP, direction, RELATIONS, RELATION_INPUT, relationAt } from '../relations.js';
 import { scaledRelation } from '../moves.js';
 import { evaluate, evaluateComplex, ratToNode, complexToNode } from './arith.js';
 import { monomial as normalMonomial, sameMonomial, negateMonomial, squareRoot } from './monomial.js';
@@ -364,7 +364,7 @@ function wrapParens(ctx) {
   let focus = null;
   for (const p of [...targets].reverse()) {
     const n = getAt(t2, p);
-    if (isRelation(n.op)) return null;
+    if (isRelation(n.op) || n.op === 'System') return null;
     const d = fn('Delimiter', n);
     focus = d.id;
     t2 = replaceAt(t2, p, d);
@@ -671,7 +671,7 @@ function doubleConjugate(ctx) {
     }
   }
   const n = getAt(tree, focus);
-  if (isRelation(n.op) || !hasComplex(tree)) return null;
+  if (isRelation(n.op) || n.op === 'System' || !hasComplex(tree)) return null;
   const node = conj(conj(n));
   return { tree: replaceAt(tree, focus, node), label: msg('step.doubleConj'), focus: node.id };
 }
@@ -987,6 +987,25 @@ export function parseSidesInput(text) {
   return e && { op, e };
 }
 
+// Aplica uma regra "de equação" à relação em foco: a raiz ou, num sistema,
+// a equação que contém o foco. O resto do sistema fica igual.
+function onRelation(f) {
+  return (ctx) => {
+    const r = relationAt(ctx.tree, ctx.focus);
+    if (!r) return null;
+    const inside = (p) => r.rp.every((v, i) => p[i] === v);
+    const res = f({
+      ...ctx,
+      tree: r.rel,
+      focus: ctx.focus.slice(r.rp.length),
+      targets: ctx.targets.filter(inside).map((p) => p.slice(r.rp.length)),
+    });
+    if (!res?.tree) return res;
+    return { ...res, tree: replaceAt(ctx.tree, r.rp, res.tree) };
+  };
+}
+const hasRelation = (ctx) => !!relationAt(ctx.tree, ctx.focus);
+
 // Numa inequação: somar e subtrair mantêm o sentido; multiplicar e dividir
 // exigem um número (negativo inverte); potência não é permitida.
 function bothSides(ctx) {
@@ -1006,7 +1025,7 @@ function bothSides(ctx) {
   return {
     tree: { ...tree, op: rel.op, args: sides },
     label: msg('step.sides', { op: sym, e: toAscii(e) }),
-    hints: rel.flipped ? { flip: true } : undefined,
+    hints: rel.flipped ? { flip: tree.id } : undefined,
   };
 }
 
@@ -1017,7 +1036,7 @@ function swapSides(ctx) {
   return {
     tree: { ...tree, op: FLIP[tree.op], args: [tree.args[1], tree.args[0]] },
     label: msg('step.swap'),
-    hints: tree.op !== FLIP[tree.op] ? { flip: true } : undefined,
+    hints: tree.op !== FLIP[tree.op] ? { flip: tree.id } : undefined,
   };
 }
 
@@ -1050,6 +1069,75 @@ function estimate(ctx) {
     tree: { ...tree, op, args },
     label: msg('step.estimate', { rel: RELATIONS[op], e: toAscii(e) }),
     focus: e.id,
+  };
+}
+
+// ---------------------------------------------------------------- sistemas
+
+// As duas equações selecionadas (Espaço) de um sistema, na ordem do texto.
+function twoEquations(ctx) {
+  const { tree, targets } = ctx;
+  if (tree.op !== 'System' || targets.length !== 2 || targets.some((p) => p.length !== 1)) return null;
+  const [i, j] = targets.map((p) => p[0]).sort((a, b) => a - b);
+  const A = tree.args[i];
+  const B = tree.args[j];
+  if (A.op !== 'Equal' || B.op !== 'Equal') return null;
+  return { i, j, A, B };
+}
+
+// E₂ ← E₂ ± E₁: a segunda equação selecionada vira a soma (ou a diferença)
+// das duas. Os lados da primeira entram como cópias.
+function combineEquations(sign) {
+  return (ctx) => {
+    const eq = twoEquations(ctx);
+    if (!eq) return null;
+    const { j, A, B } = eq;
+    const clones = {};
+    const side = (k) => {
+      const mine = B.args[k];
+      const other = cloneFrom(A.args[k], clones);
+      const extra = sign > 0 ? terms(other) : [fn('Negate', other)];
+      return fn('Add', ...terms(mine), ...extra);
+    };
+    const eqNew = withArgs(B, [side(0), side(1)]);
+    const args = ctx.tree.args.slice();
+    args[j] = eqNew;
+    return {
+      tree: withArgs(ctx.tree, args),
+      label: msg(sign > 0 ? 'step.addEq' : 'step.subEq'),
+      focus: eqNew.id,
+      hints: { clones },
+    };
+  };
+}
+
+// Com o foco numa equação "v = expressão" (ou "expressão = v") de um
+// sistema, troca v pela expressão nas outras equações.
+function substituteInSystem(ctx) {
+  const { tree, focus } = ctx;
+  if (tree.op !== 'System' || !focus.length) return null;
+  const k = focus[0];
+  const E = tree.args[k];
+  if (E.op !== 'Equal') return null;
+  const [l, r] = E.args;
+  const pick = l.op === 'Symbol' && !isImaginaryUnit(l) ? [l, r] : r.op === 'Symbol' && !isImaginaryUnit(r) ? [r, l] : null;
+  if (!pick) return null;
+  const [v, expr] = pick;
+  const clones = {};
+  let count = 0;
+  const replace = (n) => {
+    if (n.op === 'Symbol' && n.name === v.name) {
+      count++;
+      return expr.op === 'Add' || expr.op === 'Negate' ? fn('Delimiter', cloneFrom(expr, clones)) : cloneFrom(expr, clones);
+    }
+    return n.args ? withArgs(n, n.args.map(replace)) : n;
+  };
+  const args = tree.args.map((eq, idx) => (idx === k ? eq : replace(eq)));
+  if (!count) return null;
+  return {
+    tree: withArgs(tree, args),
+    label: msg('step.substSystem', { v: v.name }),
+    hints: { clones },
   };
 }
 
@@ -1097,7 +1185,7 @@ function addSubtract(ctx) {
 
   const p = targets[0];
   const n = getAt(tree, p);
-  if (isRelation(n.op)) return null;
+  if (isRelation(n.op) || n.op === 'System') return null;
   const parent = parentOf(tree, p);
   let t2;
   if (n.op === 'Add') {
@@ -1123,7 +1211,7 @@ function nameIt(ctx) {
   const name = (ctx.input ?? '').trim();
   if (!NAME_RE.test(name) || ctx.definitions?.[name]) return null;
   const n = getAt(tree, targets[0]);
-  if (isRelation(n.op) || isNamed(n)) return null;
+  if (isRelation(n.op) || n.op === 'System' || isNamed(n)) return null;
   const chip = { ...sym(name), named: true };
   return {
     tree: replaceAt(tree, targets[0], chip),
@@ -1151,7 +1239,7 @@ function openName(ctx) {
 // Ordem do menu: por assunto (o cabeçalho de cada grupo vem de i18n
 // "group.<nome>"). As teclas são fixas; operações sem tecla própria são
 // alcançadas pelas setas ou pela busca (/).
-export const GROUPS = ['arith', 'structure', 'fractions', 'powers', 'complex', 'relation', 'names'];
+export const GROUPS = ['arith', 'structure', 'fractions', 'powers', 'complex', 'relation', 'system', 'names'];
 
 export const RULES = [
   // aritmética
@@ -1170,7 +1258,7 @@ export const RULES = [
     id: 'addsub', key: 'q', group: 'structure', run: addSubtract,
     input: true,
     suggest: completeSquareSuggestion,
-    available: (ctx) => ctx.targets.every((p) => !isRelation(getAt(ctx.tree, p).op)),
+    available: (ctx) => ctx.targets.every((p) => !isRelation(getAt(ctx.tree, p).op) && getAt(ctx.tree, p).op !== 'System'),
   },
   {
     id: 'subst', key: 's', group: 'structure', run: substitute,
@@ -1194,21 +1282,26 @@ export const RULES = [
   { id: 'timesconj', key: 'y', group: 'complex', run: timesConjugate },
   // equação e inequação
   {
-    id: 'sides', key: '=', group: 'relation', run: bothSides,
+    id: 'sides', key: '=', group: 'relation', run: onRelation(bothSides),
     input: true,
-    available: (ctx) => isRelation(ctx.tree.op),
+    available: hasRelation,
   },
-  { id: 'swap', key: 't', group: 'relation', run: swapSides },
+  { id: 'swap', key: 't', group: 'relation', run: onRelation(swapSides) },
   {
-    id: 'estimate', key: 'i', group: 'relation', run: estimate,
+    id: 'estimate', key: 'i', group: 'relation', run: onRelation(estimate),
     input: true,
-    available: (ctx) => isRelation(ctx.tree.op) && ctx.tree.op !== 'NotEqual',
+    available: (ctx) => hasRelation(ctx) && relationAt(ctx.tree, ctx.focus).rel.op !== 'NotEqual',
   },
+  // sistemas
+  { id: 'addeq', key: '+', group: 'system', run: combineEquations(+1) },
+  { id: 'subeq', key: '-', group: 'system', run: combineEquations(-1) },
+  { id: 'substsys', key: '>', group: 'system', run: substituteInSystem },
   // nomes
   {
     id: 'name', key: 'a', group: 'names', run: nameIt,
     input: true,
-    available: (ctx) => ctx.targets.length === 1 && !isRelation(getAt(ctx.tree, ctx.targets[0]).op),
+    available: (ctx) => ctx.targets.length === 1 && !isRelation(getAt(ctx.tree, ctx.targets[0]).op)
+      && getAt(ctx.tree, ctx.targets[0]).op !== 'System',
   },
   { id: 'expand', key: 'k', group: 'names', run: expandName },
   { id: 'open', key: 'w', group: 'names', run: openName },

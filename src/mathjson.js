@@ -11,6 +11,8 @@ export function toMathJson(n) {
       return String(v) === n.value ? v : { num: n.value };
     }
     case 'Symbol': return n.name;
+    // Sistema de equações: conjunção das equações.
+    case 'System': return ['And', ...n.args.map(toMathJson)];
     default: return [n.op, ...n.args.map(toMathJson)];
   }
 }
@@ -20,7 +22,7 @@ export function fromMathJson(j) {
   if (typeof j === 'string') return sym(j);
   if (Array.isArray(j)) {
     const [op, ...args] = j;
-    return fn(op, ...args.map(fromMathJson));
+    return fn(op === 'And' ? 'System' : op, ...args.map(fromMathJson));
   }
   if (j && typeof j === 'object') {
     if ('num' in j) return num(j.num);

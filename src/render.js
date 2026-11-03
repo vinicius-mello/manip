@@ -43,6 +43,9 @@ function svgShape(cls, key, d) {
 const LPAREN = 'M9.5 0 C 0 22, 0 78, 9.5 100 L 10 98.5 C 3.2 76, 3.2 24, 10 1.5 Z';
 const RPAREN = 'M0.5 0 C 10 22, 10 78, 0.5 100 L 0 98.5 C 6.8 76, 6.8 24, 0 1.5 Z';
 // O radical é um traço (stroke) de espessura fixa, por mais alto que fique.
+// Chave de sistema: duas curvas com a ponta no meio.
+const BRACE = 'M9 0 C 4 0, 5 4, 5 12 L 5 40 C 5 46, 3 49, 0 50 C 3 51, 5 54, 5 60 L 5 88 C 5 96, 4 100, 9 100 '
+  + 'L 9.6 99 C 6.4 99, 6.6 95, 6.6 88 L 6.6 60 C 6.6 53.5, 5 51, 2.6 50 C 5 49, 6.6 46.5, 6.6 40 L 6.6 12 C 6.6 5, 6.4 1, 9.6 1 Z';
 const RADICAL = 'M0.4 60 L2.2 55 L5.2 96 L9.6 1 L10.4 1';
 
 function wrapParens(content, key) {
@@ -124,6 +127,10 @@ export function render(n, parent = null, index = 0) {
         el('span', 'rootindex', null, kid(n.args[1], 1)),
         svgShape('radical', n.id + '√', RADICAL),
         el('span', 'radicand', n.id + '‾', kid(n.args[0], 0))));
+      break;
+    case 'System':
+      // Equações em grade: lado esquerdo | relação | lado direito, alinhadas.
+      e.append(svgShape('brace', n.id + '{', BRACE), el('span', 'rows', null, ...n.args.map(kid)));
       break;
     case 'Conjugate':
       // z̄: barra sobre o argumento (que pode ser uma expressão inteira)

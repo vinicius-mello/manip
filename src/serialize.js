@@ -61,6 +61,7 @@ export function toAscii(n) {
     case 'Divide': return `${group(n.args[0])}/${group(n.args[1])}`;
     case 'Power': return `${sub(n.args[0], 0)}^${group(n.args[1])}`;
     case 'Delimiter': return `(${toAscii(n.args[0])})`;
+    case 'System': return n.args.map(toAscii).join('; ');
     case 'Root': return `root(${toAscii(n.args[0])}, ${toAscii(n.args[1])})`;
     default: return `${FUNCTION_NAMES[n.op] ?? n.op}(${n.args.map(toAscii).join(', ')})`;
   }
@@ -100,6 +101,7 @@ export function toLatex(n) {
     case 'Root': return `\\sqrt[${toLatex(n.args[1])}]{${toLatex(n.args[0])}}`;
     case 'Abs': return `\\left|${toLatex(n.args[0])}\\right|`;
     case 'Conjugate': return `\\overline{${toLatex(n.args[0])}}`;
+    case 'System': return `\\begin{cases} ${n.args.map(toLatex).join(' \\\\ ')} \\end{cases}`;
     case 'Real': return `\\operatorname{Re}\\left(${toLatex(n.args[0])}\\right)`;
     case 'Imaginary': return `\\operatorname{Im}\\left(${toLatex(n.args[0])}\\right)`;
     case 'Delimiter': return `\\left(${toLatex(n.args[0])}\\right)`;

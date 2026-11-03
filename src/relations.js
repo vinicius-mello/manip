@@ -26,6 +26,16 @@ export const isInequality = (op) => op === 'Less' || op === 'LessEqual' || op ==
 // Sentido: −1 para < e ≤, +1 para > e ≥, 0 para = e ≠.
 export const direction = (op) => (op.startsWith('Less') ? -1 : op.startsWith('Greater') ? 1 : 0);
 
+// A relação "da vez": a própria raiz ou, num sistema, a equação que contém
+// o caminho. Devolve { rp: caminho da relação, rel } ou null.
+export function relationAt(tree, path) {
+  if (isRelation(tree.op)) return { rp: [], rel: tree };
+  if (tree.op === 'System' && path.length >= 1 && isRelation(tree.args[path[0]]?.op)) {
+    return { rp: [path[0]], rel: tree.args[path[0]] };
+  }
+  return null;
+}
+
 // Trocar os lados ou multiplicar por negativo inverte o sentido.
 export const FLIP = {
   Less: 'Greater', Greater: 'Less', LessEqual: 'GreaterEqual', GreaterEqual: 'LessEqual',

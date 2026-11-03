@@ -3,6 +3,7 @@
 //   num, id, fn            números, símbolos, funções (v = operador MathJSON)
 //   + - * / ^ ( ) ,        operadores e pontuação
 //   rel                    relação entre os lados (v = Equal, Less, ...)
+//   ;                      separa as equações de um sistema
 //   frac, sqrt, { } [ ]    construções do LaTeX
 // Parênteses digitados viram Delimiter, exceto onde a notação já mostra o
 // agrupamento (numerador/denominador, expoente, argumento de função).
@@ -139,12 +140,20 @@ export function parseTokens(toks) {
     }
   }
 
-  const lhs = expr();
-  let root = lhs;
-  if (peek().t === 'rel') {
+  function relation() {
+    const lhs = expr();
+    if (peek().t !== 'rel') return lhs;
     const rel = next().v;
-    root = fn(rel, lhs, expr());
+    return fn(rel, lhs, expr());
+  }
+
+  // Várias relações separadas por ";" formam um sistema.
+  const rows = [relation()];
+  while (peek().t === ';') {
+    next();
+    if (peek().t === 'end') break; // ";" no fim é tolerado
+    rows.push(relation());
   }
   if (peek().t !== 'end') throw new ParseError('err.unexpected', peek().pos, { t: peek().t });
-  return root;
+  return rows.length === 1 ? rows[0] : fn('System', ...rows);
 }

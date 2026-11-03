@@ -408,7 +408,7 @@ function move(f, ...args) {
     return bump();
   }
   selected.clear();
-  commit(r.tree, r.label, r.focus ?? state().focusId, r.arc, r.flipped ? { flip: true } : undefined);
+  commit(r.tree, r.label, r.focus ?? state().focusId, r.arc, r.flipped ? { flip: r.relId } : undefined);
 }
 
 // Shift+←/→: seleção contígua entre irmãos, da âncora até o foco (como em
