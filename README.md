@@ -48,3 +48,7 @@ npm start   # servidor local sem cache em http://127.0.0.1:8765
 npm test    # testes (node --test)
 npm run publish -- "descrição"   # envia ao GitHub e atualiza o site
 ```
+
+## Licença
+
+[MIT](LICENSE) © 2026 Vinicius Mello
