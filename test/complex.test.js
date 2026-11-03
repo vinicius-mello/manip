@@ -50,7 +50,7 @@ test('propriedades do conjugado', () => {
   assert.equal(run('conj', 'w = conj(a b)', [1]), 'w = conj(a)*conj(b)');
   assert.equal(run('conj', 'w = conj(a/b)', [1]), 'w = conj(a)/conj(b)');
   assert.equal(run('conj', 'w = conj(z^2)', [1]), 'w = conj(z)^2');
-  assert.equal(run('conj', 'w = conj(conj(z))', [1]), 'w = z');
+  assert.equal(run('conj', 'w = conj(conj(z))', [1]), null, 'conjugado duplo: regra própria');
   assert.equal(run('conj', 'w = conj(i)', [1]), 'w = -i');
   assert.equal(run('conj', 'w = conj(3 + 2i)', [1]), 'w = 3 - 2i');
   assert.equal(run('conj', 'w = conj(z)', [1]), null);
@@ -83,4 +83,15 @@ test('multiplicar pelo conjugado', () => {
 
 test('resultado complexo dentro de uma soma não ganha parênteses', () => {
   assert.equal(run('calc', 'w = 1 + (2 + 3i)(1 - i)', [1, 1]), 'w = 1 + 5 + i');
+});
+
+test('z ↔ z̄̄ nos dois sentidos', () => {
+  assert.equal(run('dconj', 'w = conj(conj(z))', [1]), 'w = z', 'foco no conjugado duplo');
+  assert.equal(run('dconj', 'w = conj(conj(z))', [1, 0]), 'w = z', 'foco no conjugado de dentro');
+  assert.equal(run('dconj', 'w = conj(conj(z))', [1, 0, 0]), 'w = z', 'foco em z');
+  assert.equal(run('dconj', 'w = 1 + conj(conj(a + b))', [1, 1]), 'w = 1 + a + b');
+  assert.equal(run('dconj', 'w = z + i', [1, 0]), 'w = conj(conj(z)) + i', 'ida: z → z̄̄');
+  assert.equal(run('dconj', 'w = |z|^2', [1, 0, 0]), 'w = abs(conj(conj(z)))^2');
+  assert.equal(run('dconj', 'w = x + 1', [1, 0]), null, 'sem complexos na expressão');
+  assert.equal(run('dconj', 'w = i', []), null, 'não na equação inteira');
 });

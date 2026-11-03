@@ -710,7 +710,7 @@ kbd { min-width: 1.8em; }
 .conjbody {
   display: inline-block;
   border-top: max(1px, .05em) solid currentColor;
-  padding: .08em .02em 0;
+  padding: .12em .02em 0;
   margin-top: .04em;
 }
 

@@ -625,7 +625,8 @@ const conj = (x) => fn('Conjugate', x);
 const isConjOf = (c, z) => c.op === 'Conjugate' && same(c.args[0], z);
 
 // Conjugado "empurrado" um nível para dentro: (a + b)‾ → ā + b̄, (ab)‾ → ā·b̄,
-// (a/b)‾ → ā/b̄, (zⁿ)‾ → z̄ⁿ (n real), z̄̄ → z, ī → −i, número → conjugado.
+// (a/b)‾ → ā/b̄, (zⁿ)‾ → z̄ⁿ (n real), ī → −i, número → conjugado.
+// (z̄̄ ↔ z é a regra "dconj", nos dois sentidos.)
 function conjugateProps(ctx) {
   return atFocusOrParent(ctx, (p) => {
     const { tree } = ctx;
@@ -634,8 +635,8 @@ function conjugateProps(ctx) {
     const x = unparen(C.args[0]);
     let node = null;
     const v = evaluateComplex(x);
-    if (x.op === 'Conjugate') node = x.args[0];
-    else if (isImaginaryUnit(x)) node = fn('Negate', x);
+    if (x.op === 'Conjugate') return null;
+    if (isImaginaryUnit(x)) node = fn('Negate', x);
     else if (v) node = complexToNode({ re: v.re, im: { n: -v.im.n, d: v.im.d } });
     else if (x.op === 'Add') node = withArgs(x, x.args.map((t) => (t.op === 'Negate' ? withArgs(t, [conj(t.args[0])]) : conj(t))));
     else if (x.op === 'Multiply') node = withArgs(x, x.args.map(conj));
@@ -645,6 +646,33 @@ function conjugateProps(ctx) {
     if (!node) return null;
     return { tree: place(tree, p, node), label: msg('step.conjProps'), focus: node.id };
   });
+}
+
+// Há algo de complexo na expressão? (i, conjugado, Re, Im, arg, módulo)
+const COMPLEX_OPS = new Set(['Conjugate', 'Real', 'Imaginary', 'Argument', 'Abs']);
+function hasComplex(tree) {
+  let found = false;
+  walk(tree, (x) => { if (isImaginaryUnit(x) || COMPLEX_OPS.has(x.op)) found = true; });
+  return found;
+}
+
+// z̄̄ → z (foco no conjugado duplo ou dentro dele) e z → z̄̄ (qualquer outra
+// subexpressão, quando a expressão já envolve complexos).
+function doubleConjugate(ctx) {
+  const { tree, focus } = ctx;
+  for (let k = 0; k <= 2 && k <= focus.length; k++) {
+    const p = focus.slice(0, focus.length - k);
+    const n = getAt(tree, p);
+    const inner = n.op === 'Conjugate' && unparen(n.args[0]);
+    if (inner && inner.op === 'Conjugate') {
+      const z = inner.args[0];
+      return { tree: place(tree, p, z), label: msg('step.doubleConj'), focus: z.id };
+    }
+  }
+  const n = getAt(tree, focus);
+  if (isRelation(n.op) || !hasComplex(tree)) return null;
+  const node = conj(conj(n));
+  return { tree: replaceAt(tree, focus, node), label: msg('step.doubleConj'), focus: node.id };
 }
 
 // z·z̄ ↔ |z|²
@@ -1047,6 +1075,7 @@ export const RULES = [
   { id: 'aspower', key: 'u', run: asPower },
   { id: 'like', key: 'l', run: likeTerms },
   { id: 'conj', key: 'z', run: conjugateProps },
+  { id: 'dconj', key: '~', run: doubleConjugate },
   { id: 'conjprod', key: 'h', run: conjProduct },
   { id: 'conjsum', key: 'v', run: conjSum },
   { id: 'timesconj', key: 'y', run: timesConjugate },
