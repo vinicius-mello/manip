@@ -2,14 +2,17 @@
 // \cdot, \times, \div, \left( \right), letras gregas e funções (\sin, \ln…).
 // Só divide em tokens; a gramática é a mesma do ASCII (parser.js).
 
-import { FUNCTIONS, GREEK } from './ast.js';
+import { FUNCTIONS, GREEK, IMAGINARY } from './ast.js';
 import { parseTokens, ParseError } from './parser.js';
 import { RELATION_INPUT } from './relations.js';
 
 const COMMANDS = {
   frac: 'frac', dfrac: 'frac', tfrac: 'frac', sqrt: 'sqrt',
   cdot: '*', times: '*', div: '/',
+  lvert: '|', rvert: '|', vert: '|',
 };
+// Comandos que viram funções: conjugado com barra, Re e Im.
+const FUNCTION_COMMANDS = { overline: 'Conjugate', bar: 'Conjugate', Re: 'Real', Im: 'Imaginary' };
 const RELATION_COMMANDS = {
   le: 'LessEqual', leq: 'LessEqual', leqslant: 'LessEqual',
   ge: 'GreaterEqual', geq: 'GreaterEqual', geqslant: 'GreaterEqual',
@@ -42,6 +45,8 @@ function tokenize(src) {
       }
       if (COMMANDS[name]) push(COMMANDS[name], i);
       else if (RELATION_COMMANDS[name]) push('rel', i, RELATION_COMMANDS[name]);
+      else if (FUNCTION_COMMANDS[name]) push('fn', i, FUNCTION_COMMANDS[name]);
+      else if (name === 'imaginaryI') push('id', i, IMAGINARY);
       else if (GREEK.includes(name)) push('id', i, name);
       else if (FUNCTIONS[name]) push('fn', i, FUNCTIONS[name]);
       else if (name === 'operatorname') {
@@ -66,11 +71,12 @@ function tokenize(src) {
       push('num', i, m[0]);
       i += m[0].length;
     } else if (/[A-Za-z]/.test(c)) {
-      push('id', i, c);
+      push('id', i, c === 'i' ? IMAGINARY : c);
       i++;
     } else if (c === '_') {
       const last = toks[toks.length - 1];
       if (last?.t !== 'id') throw new ParseError('err.subNoVar', i);
+      if (last.v === IMAGINARY) last.v = 'i';
       m = /^_(\{([^{}]*)\}|([A-Za-z0-9]))/.exec(src.slice(i));
       if (!m) throw new ParseError('err.badSub', i);
       last.v += '_' + (m[2] ?? m[3]).replace(/\s+/g, '');
@@ -85,7 +91,7 @@ function tokenize(src) {
     } else if ((m = /^(<=|>=|[<>=≤≥≠])/.exec(src.slice(i)))) {
       push('rel', i, RELATION_INPUT[m[0]]);
       i += m[0].length;
-    } else if ('+-*/^(),{}'.includes(c) || CHARS[c]) {
+    } else if ('+-*/^(),{}|'.includes(c) || CHARS[c]) {
       push(CHARS[c] ?? c, i);
       i++;
     } else {

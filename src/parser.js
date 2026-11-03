@@ -22,10 +22,13 @@ export class ParseError extends Error {
 
 const unwrap = (n) => (n.op === 'Delimiter' ? n.args[0] : n);
 const ARITY = { Root: 2 };
-const ATOM_START = new Set(['num', 'id', 'fn', '(', 'frac', 'sqrt', '{']);
+const ATOM_START = new Set(['num', 'id', 'fn', '(', 'frac', 'sqrt', '{', '|']);
 
 export function parseTokens(toks) {
   let k = 0;
+  // Dentro de |...|, uma barra fecha o módulo em vez de abrir outro.
+  let absDepth = 0;
+  const startsAtom = (tok) => ATOM_START.has(tok.t) && !(tok.t === '|' && absDepth > 0);
   const peek = () => toks[k];
   const next = () => toks[k++];
   const expect = (t) => {
@@ -57,7 +60,7 @@ export function parseTokens(toks) {
       else if (tok.t === '/') {
         next();
         factors = [fn('Divide', unwrap(product()), unwrap(signedFactor()))];
-      } else if (ATOM_START.has(tok.t)) factors.push(power());
+      } else if (startsAtom(tok)) factors.push(power());
       else return product();
     }
   }
@@ -110,6 +113,13 @@ export function parseTokens(toks) {
       case '{': {
         k--;
         return braced();
+      }
+      case '|': {
+        absDepth++;
+        const e = expr();
+        absDepth--;
+        expect('|');
+        return fn('Abs', e);
       }
       case 'frac': {
         const a = braced();

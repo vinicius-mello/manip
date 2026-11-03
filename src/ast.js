@@ -77,6 +77,7 @@ export const FUNCTIONS = {
   arcsin: 'Arcsin', arccos: 'Arccos', arctan: 'Arctan',
   sinh: 'Sinh', cosh: 'Cosh', tanh: 'Tanh',
   ln: 'Ln', log: 'Log', exp: 'Exp', abs: 'Abs', sqrt: 'Sqrt', root: 'Root',
+  conj: 'Conjugate', re: 'Real', im: 'Imaginary', arg: 'Argument',
 };
 export const FUNCTION_NAMES = Object.fromEntries(
   Object.entries(FUNCTIONS).map(([k, v]) => [v, k]),
@@ -86,7 +87,12 @@ export const FUNCTION_NAMES = Object.fromEntries(
 Object.assign(FUNCTIONS, {
   sen: 'Sin', tg: 'Tan', cotg: 'Cot', cossec: 'Csc',
   arcsen: 'Arcsin', arctg: 'Arctan', senh: 'Sinh', tgh: 'Tanh',
+  Re: 'Real', Im: 'Imaginary',
 });
+
+// Unidade imaginária: o símbolo "i" (com subscrito, i_1 continua variável).
+export const IMAGINARY = 'ImaginaryUnit';
+export const isImaginaryUnit = (n) => n.op === 'Symbol' && n.name === IMAGINARY;
 
 export const GREEK = [
   'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota',

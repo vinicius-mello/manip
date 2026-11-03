@@ -702,6 +702,18 @@ kbd { min-width: 1.8em; }
   line-height: 1;
 }
 
+.imag { font-style: normal; padding: 0 .02em; }
+
+/* Conjugado: barra sobre o argumento. A margem lateral separa barras
+   vizinhas: z̄·w̄ não pode parecer o conjugado de zw. */
+.formula .n.Conjugate { margin: 0 .05em; }
+.conjbody {
+  display: inline-block;
+  border-top: max(1px, .05em) solid currentColor;
+  padding: .08em .02em 0;
+  margin-top: .04em;
+}
+
 .bars {
   display: inline-block;
   border-left: max(1px, .05em) solid currentColor;
@@ -831,6 +843,9 @@ kbd { min-width: 1.8em; }
 }
 
 .kb-frac > span + span { border-top: 1.5px solid currentColor; }
+
+.kb-imag { font-style: normal; }
+.kb-conj { display: inline-block; border-top: 1.5px solid currentColor; padding-top: 1px; line-height: 1; }
 
 .kb-box {
   display: inline-block;

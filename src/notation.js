@@ -3,7 +3,9 @@
 
 import { isLeaf, FUNCTION_NAMES } from './ast.js';
 
-const OWN_NOTATION = new Set(['Sqrt', 'Root', 'Abs']);
+const OWN_NOTATION = new Set(['Sqrt', 'Root', 'Abs', 'Conjugate']);
+// Funções escritas sempre com parênteses: Re(z), Im(z), arg(z).
+const ALWAYS_PARENS = new Set(['Real', 'Imaginary', 'Argument']);
 export const isFunctionOp = (op) => op in FUNCTION_NAMES && !OWN_NOTATION.has(op);
 
 // Parênteses que não foram digitados mas que a estrutura exige para ser lida
@@ -20,6 +22,7 @@ export function needsParens(child, parent, index) {
     case 'Power':
       return index === 0 && !isLeaf(child) && c !== 'Delimiter' && !OWN_NOTATION.has(c);
     default:
+      if (ALWAYS_PARENS.has(parent.op)) return c !== 'Delimiter';
       if (isFunctionOp(parent.op)) return !isLeaf(child) && c !== 'Delimiter';
       return false;
   }

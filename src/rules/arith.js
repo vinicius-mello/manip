@@ -1,7 +1,7 @@
-// Aritmética exata com racionais (BigInt), usada só quando o usuário pede
-// para calcular uma subexpressão numérica.
+// Aritmética exata com racionais e complexos de coordenadas racionais
+// (BigInt), usada só quando o usuário pede para calcular uma subexpressão.
 
-import { num, fn } from '../ast.js';
+import { num, fn, sym } from '../ast.js';
 
 const gcd = (a, b) => {
   a = a < 0n ? -a : a;
@@ -26,57 +26,128 @@ const add = (a, b) => rat(a.n * b.d + b.n * a.d, a.d * b.d);
 const mul = (a, b) => rat(a.n * b.n, a.d * b.d);
 const div = (a, b) => (b.n === 0n ? null : rat(a.n * b.d, a.d * b.n));
 
-function pow(a, e) {
-  if (e.d !== 1n) return null;
-  let k = e.n < 0n ? -e.n : e.n;
-  if (k > 1000n) return null;
-  let r = rat(1n);
-  for (; k > 0n; k--) r = mul(r, a);
-  return e.n < 0n ? div(rat(1n), r) : r;
-}
-
 const DECIMAL = Symbol('decimal');
 
-// Valor racional de uma subárvore puramente numérica, ou null.
-export function evaluate(n) {
+// ---------- complexos com coordenadas racionais: { re, im } ----------
+
+const ZERO = () => rat(0n);
+const cx = (re, im = ZERO()) => (re && im ? { re, im } : null);
+const isZero = (r) => r.n === 0n;
+
+const cadd = (a, b) => cx(add(a.re, b.re), add(a.im, b.im));
+const cneg = (a) => cx(rat(-a.re.n, a.re.d), rat(-a.im.n, a.im.d));
+const cconj = (a) => cx(a.re, rat(-a.im.n, a.im.d));
+const cmul = (a, b) => cx(
+  add(mul(a.re, b.re), mul(rat(-1n), mul(a.im, b.im))),
+  add(mul(a.re, b.im), mul(a.im, b.re)),
+);
+const norm2 = (a) => add(mul(a.re, a.re), mul(a.im, a.im));
+function cdiv(a, b) {
+  const d = norm2(b);
+  if (isZero(d)) return null;
+  const p = cmul(a, cconj(b));
+  return cx(div(p.re, d), div(p.im, d));
+}
+function cpow(a, e) {
+  if (!isZero(e.im) || e.re.d !== 1n) return null;
+  let k = e.re.n < 0n ? -e.re.n : e.re.n;
+  if (k > 1000n) return null;
+  let r = cx(rat(1n));
+  for (; k > 0n; k--) r = cmul(r, a);
+  return e.re.n < 0n ? cdiv(cx(rat(1n)), r) : r;
+}
+
+// Raiz quadrada exata de um racional não negativo, ou null.
+function bigSqrt(n) {
+  if (n < 0n) return null;
+  if (n < 2n) return n;
+  let x = BigInt(Math.floor(Math.sqrt(Number(n))));
+  while (x * x > n) x--;
+  while ((x + 1n) * (x + 1n) <= n) x++;
+  return x * x === n ? x : null;
+}
+function ratSqrt(r) {
+  const a = bigSqrt(r.n);
+  const b = bigSqrt(r.d);
+  return a === null || b === null ? null : rat(a, b);
+}
+
+// Valor de uma subárvore puramente numérica (pode conter i), ou null.
+export function evaluateComplex(n) {
+  const dec = (v, ...from) => {
+    if (v && from.some((x) => x?.[DECIMAL])) v[DECIMAL] = true;
+    return v;
+  };
   switch (n.op) {
     case 'Number': {
-      const r = parseNumber(n.value);
-      if (n.value.includes('.')) r[DECIMAL] = true;
-      return r;
+      const v = cx(parseNumber(n.value));
+      if (n.value.includes('.')) v[DECIMAL] = true;
+      return v;
     }
-    case 'Delimiter': return evaluate(n.args[0]);
+    case 'Symbol': return n.name === 'ImaginaryUnit' ? cx(ZERO(), rat(1n)) : null;
+    case 'Delimiter': return evaluateComplex(n.args[0]);
     case 'Negate': {
-      const a = evaluate(n.args[0]);
-      return a && keep(rat(-a.n, a.d), a);
+      const a = evaluateComplex(n.args[0]);
+      return a && dec(cneg(a), a);
     }
     case 'Add': case 'Multiply': {
       let acc = null;
       for (const c of n.args) {
-        const v = evaluate(c);
+        const v = evaluateComplex(c);
         if (!v) return null;
-        acc = acc ? keep(n.op === 'Add' ? add(acc, v) : mul(acc, v), acc, v) : v;
+        acc = acc ? dec(n.op === 'Add' ? cadd(acc, v) : cmul(acc, v), acc, v) : v;
       }
       return acc;
     }
     case 'Divide': {
-      const a = evaluate(n.args[0]);
-      const b = evaluate(n.args[1]);
-      return a && b && keep(div(a, b), a, b);
+      const a = evaluateComplex(n.args[0]);
+      const b = evaluateComplex(n.args[1]);
+      return a && b && dec(cdiv(a, b), a, b);
     }
     case 'Power': {
-      const a = evaluate(n.args[0]);
-      const b = evaluate(n.args[1]);
-      return a && b && keep(pow(a, b), a, b);
+      const a = evaluateComplex(n.args[0]);
+      const b = evaluateComplex(n.args[1]);
+      return a && b && dec(cpow(a, b), a, b);
+    }
+    case 'Conjugate': {
+      const a = evaluateComplex(n.args[0]);
+      return a && dec(cconj(a), a);
+    }
+    case 'Real': case 'Imaginary': {
+      const a = evaluateComplex(n.args[0]);
+      return a && dec(cx(n.op === 'Real' ? a.re : a.im), a);
+    }
+    case 'Abs': {
+      const a = evaluateComplex(n.args[0]);
+      const r = a && ratSqrt(norm2(a));
+      return r && dec(cx(r), a);
     }
     default: return null;
   }
 }
 
-// Propaga a marca "veio de decimal" para o resultado.
-function keep(r, ...from) {
-  if (r && from.some((x) => x?.[DECIMAL])) r[DECIMAL] = true;
-  return r;
+// Valor racional (real) de uma subárvore numérica, ou null.
+export function evaluate(n) {
+  const v = evaluateComplex(n);
+  if (!v || !isZero(v.im)) return null;
+  if (v[DECIMAL]) v.re[DECIMAL] = true;
+  return v.re;
+}
+
+// Nó para um complexo: 3, 2i, −i, 3 − 2i, 1/2 + (1/2)i...
+export function complexToNode(v) {
+  const flagged = (r) => {
+    if (v[DECIMAL]) r[DECIMAL] = true;
+    return r;
+  };
+  if (isZero(v.im)) return ratToNode(flagged(v.re));
+  const neg = v.im.n < 0n;
+  const abs = flagged(rat(neg ? -v.im.n : v.im.n, v.im.d));
+  const unit = sym('ImaginaryUnit');
+  const coef = ratToNode(abs);
+  const imag = coef.op === 'Number' && coef.value === '1' ? unit : fn('Multiply', coef, unit);
+  if (isZero(v.re)) return neg ? fn('Negate', imag) : imag;
+  return fn('Add', ratToNode(flagged(v.re)), neg ? fn('Negate', imag) : imag);
 }
 
 function terminatingDecimal({ n, d }) {

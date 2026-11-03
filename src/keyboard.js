@@ -45,6 +45,14 @@ const PAGES = {
   'f(x)': [
     ['sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan'].map(fnKey),
     [...['ln', 'log', 'exp'].map(fnKey), k('|<i>x</i>|', 'abs(|)', '\\operatorname{abs}\\left(|\\right)', 'fn'), k(SQRT, 'sqrt(|)', '\\sqrt{|}', 'op'), k(ROOT, 'root(|, )', '\\sqrt[|]{}', 'op')],
+    [
+      k('<span class="kb-imag">i</span>', 'i', '\\mathrm{i}', 'math'),
+      k('<span class="kb-conj"><i>z</i></span>', 'conj(|)', '\\overline{|}', 'op'),
+      k('Re', 're(|)', '\\operatorname{Re}\\left(|\\right)', 'fn'),
+      k('Im', 'im(|)', '\\operatorname{Im}\\left(|\\right)', 'fn'),
+      k('arg', 'arg(|)', '\\arg\\left(|\\right)', 'fn'),
+      k('|<i>z</i>|²', 'abs(|)^2', '\\operatorname{abs}\\left(|\\right)^{2}', 'op'),
+    ],
   ],
 };
 

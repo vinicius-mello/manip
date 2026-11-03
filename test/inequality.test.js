@@ -65,7 +65,7 @@ test('transposição em inequações respeita o sinal', () => {
 
 test('operar nos dois lados e trocar os lados', () => {
   assert.equal(run('sides', 'x - 3 < 4', '+ 3'), 'x - 3 + 3 < 4 + 3');
-  assert.equal(run('sides', '-x < 4', '* (-1)'), '-x(-1) > 4(-1)');
+  assert.equal(run('sides', '-x < 4', '* (-1)'), '-x*(-1) > 4(-1)');
   assert.equal(run('sides', 'x < 4', '/ 2'), 'x/2 < 4/2');
   assert.equal(run('sides', 'x < 4', '* y'), 'err.signUnknown');
   assert.equal(run('sides', 'x < 4', '* 0'), 'err.zero');

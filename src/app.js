@@ -191,9 +191,10 @@ function updateScrollHints() {
 
 stage.addEventListener('scroll', updateScrollHints, { passive: true });
 
+// (2 px de folga contra arredondamentos que criariam uma barra de rolagem)
 const stageWidth = () => {
   const cs = getComputedStyle(stage);
-  return stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  return stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 2;
 };
 
 // No modo apresentação a fórmula divide a altura com o quadro de passos.

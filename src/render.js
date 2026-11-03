@@ -4,7 +4,7 @@
 // recebem data-key derivada do nó dono, para que animate.js consiga
 // acompanhar cada pedaço entre dois estados.
 
-import { GREEK, FUNCTION_NAMES } from './ast.js';
+import { GREEK, FUNCTION_NAMES, IMAGINARY } from './ast.js';
 import { needsParens, needsDot } from './notation.js';
 import { functionLabel } from './i18n.js';
 import { RELATIONS } from './relations.js';
@@ -55,6 +55,7 @@ function wrapParens(content, key) {
 const op = (text, key, cls = 'bin') => el('span', 'op ' + cls, key, text);
 
 function symbolContent(name) {
+  if (name === IMAGINARY) return [el('span', 'imag', null, 'i')];
   const [base, sub] = name.split('_');
   const greek = GREEK.includes(base);
   const b = el('span', greek ? 'greek' : 'var', null, greek ? GREEK_CHARS[base] : base);
@@ -123,6 +124,10 @@ export function render(n, parent = null, index = 0) {
         el('span', 'rootindex', null, kid(n.args[1], 1)),
         svgShape('radical', n.id + '√', RADICAL),
         el('span', 'radicand', n.id + '‾', kid(n.args[0], 0))));
+      break;
+    case 'Conjugate':
+      // z̄: barra sobre o argumento (que pode ser uma expressão inteira)
+      e.append(el('span', 'conjbody', n.id + '‾', kid(n.args[0], 0)));
       break;
     case 'Abs':
       e.append(el('span', 'bars', null, kid(n.args[0], 0)));

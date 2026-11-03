@@ -2,7 +2,7 @@
 // Não simplifica nada: a árvore reflete exatamente o que foi digitado.
 // A gramática está em parser.js; aqui fica só a divisão em tokens.
 
-import { FUNCTIONS, GREEK } from './ast.js';
+import { FUNCTIONS, GREEK, IMAGINARY } from './ast.js';
 import { parseTokens, ParseError } from './parser.js';
 import { RELATION_INPUT } from './relations.js';
 
@@ -22,7 +22,7 @@ function tokenize(src) {
       splitWord(m[0], i, toks);
     } else if ((m = /^(<=|>=|!=|[<>=≤≥≠])/.exec(rest))) {
       toks.push({ t: 'rel', v: RELATION_INPUT[m[0]], pos: i });
-    } else if ('+-*/^(),·×÷−'.includes(c)) {
+    } else if ('+-*/^(),|·×÷−'.includes(c)) {
       const v = { '·': '*', '×': '*', '÷': '/', '−': '-' }[c] ?? c;
       toks.push({ t: v, pos: i });
       m = [c];
@@ -53,12 +53,13 @@ function splitWord(word, pos, toks) {
       toks.push({ t: 'id', v: g, pos: pos + i });
       i += g.length;
     } else {
-      toks.push({ t: 'id', v: base[i], pos: pos + i });
+      toks.push({ t: 'id', v: base[i] === 'i' ? IMAGINARY : base[i], pos: pos + i });
       i += 1;
     }
   }
   if (sub !== undefined) {
     const last = toks[toks.length - 1];
+    if (last.v === IMAGINARY) last.v = 'i';
     if (last.t !== 'id') throw new ParseError('err.subNoVar', pos);
     last.v += '_' + sub;
   }

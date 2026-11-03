@@ -16,14 +16,14 @@
 //   strike: [ids]                    pedaços removidos são riscados
 //   clones: { idNovo: idOrigem }     cópias saem da posição do original
 
-import { getAt, replaceAt, withArgs, fn, num, sym, same, isLeaf } from '../ast.js';
+import { getAt, replaceAt, withArgs, fn, num, sym, same, isLeaf, IMAGINARY, isImaginaryUnit, walk } from '../ast.js';
 import { needsParens } from '../notation.js';
 import { parseInput } from '../input.js';
 import { toAscii } from '../serialize.js';
 import { msg } from '../i18n.js';
 import { isRelation, FLIP, direction, RELATIONS, RELATION_INPUT } from '../relations.js';
 import { scaledRelation } from '../moves.js';
-import { evaluate, ratToNode } from './arith.js';
+import { evaluate, evaluateComplex, ratToNode, complexToNode } from './arith.js';
 import {
   terms, factors, unparen, signed, parentPath, lastIndex, parentOf,
   siblingsOf, cloneFrom, spliceFlat,
@@ -66,12 +66,12 @@ function calculate(ctx) {
     const p = targets[0];
     const n = getAt(tree, p);
     if (isLeaf(n) || (n.op === 'Negate' && isLeaf(n.args[0]))) return null;
-    const v = evaluate(n);
+    const v = evaluateComplex(n);
     if (!v) return null;
-    const node = ratToNode(v);
+    const node = complexToNode(v);
     if (same(node, n)) return null;
     return {
-      tree: replaceAt(tree, p, node),
+      tree: place(tree, p, node),
       label: msg('step.calc'),
       focus: node.id,
       hints: { merge: { to: node.id, from: [n.id] } },
@@ -83,9 +83,9 @@ function calculate(ctx) {
   const parent = getAt(tree, pp);
   if (parent.op !== 'Add' && parent.op !== 'Multiply') return null;
   const items = idx.map((i) => parent.args[i]);
-  const v = evaluate(fn(parent.op, ...items));
+  const v = evaluateComplex(fn(parent.op, ...items));
   if (!v) return null;
-  const node = ratToNode(v);
+  const node = complexToNode(v);
   const args = parent.args.filter((_, i) => !idx.includes(i) || i === idx[0]);
   args[args.indexOf(parent.args[idx[0]])] = node;
   return {
@@ -619,6 +619,145 @@ function likeTerms(ctx) {
   };
 }
 
+// ------------------------------------------------------------- complexos
+
+const conj = (x) => fn('Conjugate', x);
+const isConjOf = (c, z) => c.op === 'Conjugate' && same(c.args[0], z);
+
+// Conjugado "empurrado" um nível para dentro: (a + b)‾ → ā + b̄, (ab)‾ → ā·b̄,
+// (a/b)‾ → ā/b̄, (zⁿ)‾ → z̄ⁿ (n real), z̄̄ → z, ī → −i, número → conjugado.
+function conjugateProps(ctx) {
+  return atFocusOrParent(ctx, (p) => {
+    const { tree } = ctx;
+    const C = getAt(tree, p);
+    if (C.op !== 'Conjugate') return null;
+    const x = unparen(C.args[0]);
+    let node = null;
+    const v = evaluateComplex(x);
+    if (x.op === 'Conjugate') node = x.args[0];
+    else if (isImaginaryUnit(x)) node = fn('Negate', x);
+    else if (v) node = complexToNode({ re: v.re, im: { n: -v.im.n, d: v.im.d } });
+    else if (x.op === 'Add') node = withArgs(x, x.args.map((t) => (t.op === 'Negate' ? withArgs(t, [conj(t.args[0])]) : conj(t))));
+    else if (x.op === 'Multiply') node = withArgs(x, x.args.map(conj));
+    else if (x.op === 'Divide') node = withArgs(x, x.args.map(conj));
+    else if (x.op === 'Negate') node = withArgs(x, [conj(x.args[0])]);
+    else if (x.op === 'Power' && evaluate(x.args[1])) node = withArgs(x, [conj(x.args[0]), x.args[1]]);
+    if (!node) return null;
+    return { tree: place(tree, p, node), label: msg('step.conjProps'), focus: node.id };
+  });
+}
+
+// z·z̄ ↔ |z|²
+function conjProduct(ctx) {
+  return atFocusOrParent(ctx, (p) => {
+    const { tree } = ctx;
+    const n = getAt(tree, p);
+    // |z|² → z·z̄
+    if (n.op === 'Power' && n.args[0].op === 'Abs' && isNum(n.args[1], 2)) {
+      const z = n.args[0].args[0];
+      const prod = fn('Multiply', z, conj(cloneFrom(z, {})));
+      return { tree: replaceAt(tree, p, prod), label: msg('step.conjProduct'), focus: prod.id };
+    }
+    // z·z̄ (em qualquer posição do produto) → |z|²
+    if (n.op !== 'Multiply') return null;
+    for (let i = 0; i < n.args.length; i++) {
+      for (let j = 0; j < n.args.length; j++) {
+        if (i === j) continue;
+        const z = n.args[i];
+        if (!isConjOf(n.args[j], z)) continue;
+        const pw = fn('Power', fn('Abs', z), num(2));
+        const args = n.args.filter((_, k) => k !== j);
+        args[args.indexOf(z)] = pw;
+        return {
+          tree: replaceAt(tree, p, rebuild('Multiply', args, n)),
+          label: msg('step.conjProduct'),
+          focus: pw.id,
+          hints: { merge: { to: z.id, from: [n.args[j].id] } },
+        };
+      }
+    }
+    return null;
+  });
+}
+
+const twoRe = (z) => fn('Multiply', num(2), fn('Real', z));
+const twoIIm = (z) => fn('Multiply', num(2), sym(IMAGINARY), fn('Imaginary', z));
+const isTwoRe = (n) => n.op === 'Multiply' && n.args.length === 2 && isNum(n.args[0], 2) && n.args[1].op === 'Real';
+const isTwoIIm = (n) => n.op === 'Multiply' && n.args.length === 3 && isNum(n.args[0], 2)
+  && isImaginaryUnit(n.args[1]) && n.args[2].op === 'Imaginary';
+
+// z + z̄ ↔ 2Re(z) e z − z̄ ↔ 2i·Im(z); Re(z) → (z + z̄)/2, Im(z) → (z − z̄)/(2i).
+function conjSum(ctx) {
+  return atFocusOrParent(ctx, (p) => {
+    const { tree } = ctx;
+    const n = getAt(tree, p);
+    const parent = parentOf(tree, p);
+    if (isTwoRe(n)) {
+      const z = n.args[1].args[0];
+      const sum = fn('Add', z, conj(cloneFrom(z, {})));
+      return { tree: replaceAt(tree, p, sum), label: msg('step.conjSum'), focus: sum.id };
+    }
+    if (isTwoIIm(n)) {
+      const z = n.args[2].args[0];
+      const diff = fn('Add', z, fn('Negate', conj(cloneFrom(z, {}))));
+      return { tree: replaceAt(tree, p, diff), label: msg('step.conjSum'), focus: diff.id };
+    }
+    if ((n.op === 'Real' || n.op === 'Imaginary') && !(parent && (isTwoRe(parent) || isTwoIIm(parent)))) {
+      const z = n.args[0];
+      const top = n.op === 'Real'
+        ? fn('Add', z, conj(cloneFrom(z, {})))
+        : fn('Add', z, fn('Negate', conj(cloneFrom(z, {}))));
+      const den = n.op === 'Real' ? num(2) : fn('Multiply', num(2), sym(IMAGINARY));
+      const frac = fn('Divide', top, den);
+      return { tree: replaceAt(tree, p, frac), label: msg('step.conjSum'), focus: frac.id };
+    }
+    if (n.op !== 'Add') return null;
+    for (let i = 0; i < n.args.length; i++) {
+      for (let j = 0; j < n.args.length; j++) {
+        if (i === j) continue;
+        const a = signed(n.args[i]);
+        const b = signed(n.args[j]);
+        if (!isConjOf(b.body, a.body) || a.body.op === 'Conjugate') continue;
+        // ±z ± z̄
+        let term;
+        if (a.neg === b.neg) term = twoRe(a.body);
+        else term = twoIIm(a.body);
+        if (a.neg) term = fn('Negate', term);
+        const first = Math.min(i, j);
+        const args = n.args.filter((_, k) => k !== i && k !== j);
+        args.splice(first, 0, term);
+        return {
+          tree: replaceAt(tree, p, rebuild('Add', args, n)),
+          label: msg('step.conjSum'),
+          focus: term.id,
+          hints: { merge: { to: term.id, from: [n.args[i].id, n.args[j].id] } },
+        };
+      }
+    }
+    return null;
+  });
+}
+
+const hasImaginary = (n) => {
+  let found = false;
+  walk(n, (x) => { if (isImaginaryUnit(x)) found = true; });
+  return found;
+};
+
+// a/(c + di) → a(c − di) / ((c + di)(c − di))
+function timesConjugate(ctx) {
+  return atFocusOrParent(ctx, (p) => {
+    const { tree } = ctx;
+    const D = getAt(tree, p);
+    if (D.op !== 'Divide' || !hasImaginary(D.args[1])) return null;
+    const den = D.args[1];
+    const v = evaluateComplex(den);
+    const conjOf = () => (v ? complexToNode({ re: v.re, im: { n: -v.im.n, d: v.im.d } }) : conj(cloneFrom(den, {})));
+    const frac = withArgs(D, [fn('Multiply', D.args[0], conjOf()), fn('Multiply', den, conjOf())]);
+    return { tree: replaceAt(tree, p, frac), label: msg('step.timesConj'), focus: frac.id };
+  });
+}
+
 // --------------------------------------------- expansão de potências
 
 const MAX_TERMS = 60;
@@ -907,6 +1046,10 @@ export const RULES = [
   { id: 'asproduct', key: 'm', run: powerAsProduct },
   { id: 'aspower', key: 'u', run: asPower },
   { id: 'like', key: 'l', run: likeTerms },
+  { id: 'conj', key: 'z', run: conjugateProps },
+  { id: 'conjprod', key: 'h', run: conjProduct },
+  { id: 'conjsum', key: 'v', run: conjSum },
+  { id: 'timesconj', key: 'y', run: timesConjugate },
   { id: 'expand', key: 'k', run: expandName },
   { id: 'open', key: 'w', run: openName },
   {

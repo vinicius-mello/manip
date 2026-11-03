@@ -1,20 +1,53 @@
 // Serialização da árvore para ASCII (reeditar no campo de entrada) e LaTeX.
 
-import { FUNCTION_NAMES, GREEK } from './ast.js';
-import { needsParens, needsDot, isFunctionOp } from './notation.js';
-import { ASCII_RELATIONS, LATEX_RELATIONS } from './relations.js';
+import { FUNCTION_NAMES, GREEK, IMAGINARY } from './ast.js';
+import { needsParens, needsDot } from './notation.js';
+import { ASCII_RELATIONS, LATEX_RELATIONS, isRelation } from './relations.js';
+import { parseAscii } from './parse-ascii.js';
 
-const asciiAtomic = (n) => n.op === 'Number' || n.op === 'Symbol' || n.op === 'Delimiter';
+// Escrito como um bloco só: número, símbolo, (…) ou nome(…).
+const COMPOUND = new Set(['Add', 'Multiply', 'Divide', 'Power', 'Negate']);
+const asciiAtomic = (n) => !COMPOUND.has(n.op) && !isRelation(n.op);
+// Escrito como nome(…): sqrt(x), conj(z), sin(x)...
+const callStyle = (n) => asciiAtomic(n) && n.op !== 'Number' && n.op !== 'Symbol' && n.op !== 'Delimiter';
+
+// Igualdade estrutural ignorando parênteses digitados (Delimiter).
+function looseSame(a, b) {
+  while (a.op === 'Delimiter') a = a.args[0];
+  while (b.op === 'Delimiter') b = b.args[0];
+  if (a.op !== b.op) return false;
+  if (a.op === 'Number') return a.value === b.value;
+  if (a.op === 'Symbol') return a.name === b.name;
+  return a.args.length === b.args.length && a.args.every((c, i) => looseSame(c, b.args[i]));
+}
+
+// Produto em ASCII: justaposição quando é seguro ("2x", "xy", "2sin(x)"),
+// "*" antes de nome(…) depois de letra ("x*sin(x)"). Se a versão justaposta
+// não for lida de volta igual (ex.: p·i viraria a letra π), usa "*" em tudo.
+function asciiProduct(n, sub) {
+  const parts = n.args.map((c, i) => (c.op === 'Divide' ? `(${toAscii(c)})` : sub(c, i)));
+  const joined = parts.map((p, i) => {
+    if (i === 0) return p;
+    const prev = n.args[i - 1];
+    const c = n.args[i];
+    const star = needsDot(prev, c, i, n) || (callStyle(c) && prev.op !== 'Number' && !needsParens(c, n, i));
+    return (star ? '*' : '') + p;
+  }).join('');
+  try {
+    if (looseSame(parseAscii(joined), n)) return joined;
+  } catch { /* não lê de volta: usa "*" */ }
+  return parts.join('*');
+}
 
 export function toAscii(n) {
   const sub = (c, i) => {
     const s = toAscii(c);
     return needsParens(c, n, i) ? `(${s})` : s;
   };
-  const group = (c) => (asciiAtomic(c) || isFunctionOp(c.op) ? toAscii(c) : `(${toAscii(c)})`);
+  const group = (c) => (asciiAtomic(c) ? toAscii(c) : `(${toAscii(c)})`);
   switch (n.op) {
     case 'Number': return n.value;
-    case 'Symbol': return n.name;
+    case 'Symbol': return n.name === IMAGINARY ? 'i' : n.name;
     case 'Equal': case 'NotEqual': case 'Less': case 'LessEqual': case 'Greater': case 'GreaterEqual':
       return `${toAscii(n.args[0])} ${ASCII_RELATIONS[n.op]} ${toAscii(n.args[1])}`;
     case 'Add':
@@ -23,14 +56,8 @@ export function toAscii(n) {
         return (i > 0 ? ' + ' : '') + sub(c, i);
       }).join('');
     case 'Negate': return '-' + sub(n.args[0], 0);
-    case 'Multiply':
-      return n.args.map((c, i) => {
-        // Em ASCII, uma fração dentro de um produto precisa de parênteses:
-        // "x*1/2" seria lido como (x·1)/2.
-        if (c.op === 'Divide') return `(${toAscii(c)})`;
-        const sep = i === 0 ? '' : needsDot(n.args[i - 1], c, i, n) ? '*' : '';
-        return sep + sub(c, i);
-      }).join('');
+    // Fração dentro de produto vai entre parênteses: "x*1/2" seria (x·1)/2.
+    case 'Multiply': return asciiProduct(n, sub);
     case 'Divide': return `${group(n.args[0])}/${group(n.args[1])}`;
     case 'Power': return `${sub(n.args[0], 0)}^${group(n.args[1])}`;
     case 'Delimiter': return `(${toAscii(n.args[0])})`;
@@ -40,6 +67,7 @@ export function toAscii(n) {
 }
 
 function latexSymbol(name) {
+  if (name === IMAGINARY) return '\\mathrm{i}';
   const [base, sub] = name.split('_');
   const b = GREEK.includes(base) ? `\\${base}` : base;
   return sub === undefined ? b : `${b}_{${sub}}`;
@@ -71,6 +99,9 @@ export function toLatex(n) {
     case 'Sqrt': return `\\sqrt{${toLatex(n.args[0])}}`;
     case 'Root': return `\\sqrt[${toLatex(n.args[1])}]{${toLatex(n.args[0])}}`;
     case 'Abs': return `\\left|${toLatex(n.args[0])}\\right|`;
+    case 'Conjugate': return `\\overline{${toLatex(n.args[0])}}`;
+    case 'Real': return `\\operatorname{Re}\\left(${toLatex(n.args[0])}\\right)`;
+    case 'Imaginary': return `\\operatorname{Im}\\left(${toLatex(n.args[0])}\\right)`;
     case 'Delimiter': return `\\left(${toLatex(n.args[0])}\\right)`;
     default: {
       const name = FUNCTION_NAMES[n.op] ?? n.op;
