@@ -41,7 +41,8 @@ function svgShape(cls, key, d) {
 // Formas preenchidas: esticadas na vertical, a espessura horizontal se mantém.
 const LPAREN = 'M9.5 0 C 0 22, 0 78, 9.5 100 L 10 98.5 C 3.2 76, 3.2 24, 10 1.5 Z';
 const RPAREN = 'M0.5 0 C 10 22, 10 78, 0.5 100 L 0 98.5 C 6.8 76, 6.8 24, 0 1.5 Z';
-const RADICAL = 'M0 62 L2.2 57 L5 92 L9.2 0 L10 0 L10 2.5 L5.6 100 L4.6 100 L1.6 61 L0.6 63.5 Z';
+// O radical é um traço (stroke) de espessura fixa, por mais alto que fique.
+const RADICAL = 'M0.4 60 L2.2 55 L5.2 96 L9.6 1 L10.4 1';
 
 function wrapParens(content, key) {
   return el('span', 'delim', null,
@@ -77,9 +78,13 @@ export function render(n, parent = null, index = 0) {
       e.append(kid(n.args[0], 0), op('=', n.id + '=', 'rel'), kid(n.args[1], 1));
       break;
     case 'Add':
+      // Cada termo fica junto do seu sinal num "chunk": é por eles que uma
+      // expressão longa quebra de linha (o sinal começa a linha seguinte).
       n.args.forEach((c, i) => {
-        if (i > 0 && c.op !== 'Negate') e.append(op('+', `${n.id}+${c.id}`));
-        e.append(kid(c, i));
+        const chunk = el('span', 'chunk');
+        if (i > 0 && c.op !== 'Negate') chunk.append(op('+', `${n.id}+${c.id}`));
+        chunk.append(kid(c, i));
+        e.append(chunk);
       });
       break;
     case 'Negate': {

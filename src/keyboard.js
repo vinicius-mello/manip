@@ -188,6 +188,8 @@ export function createKeyboard(panel, { fallback }) {
     toggle(open = panel.hidden) {
       panel.hidden = !open;
       document.body.classList.toggle('kb-open', open);
+      // O aviso (toast) sobe para não cobrir as teclas.
+      if (open) document.body.style.setProperty('--kb-h', `${panel.offsetHeight}px`);
       if (open) updatePreview();
       return open;
     },

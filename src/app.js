@@ -39,12 +39,17 @@ const themeSelect = $('#theme');
 const langSelect = $('#lang');
 const KB_KEY = 'manip.keyboard';
 const THEME_KEY = 'manip.theme';
+const ZOOM_KEY = 'manip.zoom';
+const LONG_KEY = 'manip.long';
+const longSelect = $('#long');
 
 let workspaces = [];
 let active = 0;
 let selected = new Set();
 let anchorId = null; // início da seleção feita com Shift+setas
 let presenting = false;
+let zoom = 1;          // tamanho da fórmula escolhido com + / − / 0
+let longMode = 'wrap'; // expressões longas: 'wrap' (quebrar linhas) ou 'scroll'
 
 const ws = () => workspaces[active];
 const history = () => ws().history;
@@ -102,7 +107,8 @@ function switchTo(i) {
 
 // ---------- renderização ----------
 
-// Reduz a fonte quando a fórmula não cabe no espaço disponível.
+// Reduz a fonte quando a fórmula não cabe no espaço disponível (miniaturas
+// do histórico, prévias, quadro da apresentação).
 function fit(root, width, height = Infinity) {
   root.style.fontSize = '';
   layoutPowers(root);
@@ -112,6 +118,77 @@ function fit(root, width, height = Infinity) {
   root.style.fontSize = `${Math.max(10, size * scale)}px`;
   layoutPowers(root);
 }
+
+// Fórmula principal. Em ordem de preferência:
+//   1. tamanho normal (vezes o zoom);
+//   2. encolhida até um tamanho mínimo legível;
+//   3. quebrada em linhas nos + e − do nível de cima de cada lado, no maior
+//      tamanho (até o mínimo) que caiba na altura;
+//   4. no mínimo legível, com rolagem (modo "rolar", ou termo grande demais).
+const MIN_READABLE = 26;
+const WRAPPABLE = ':scope > .Equal > .Add, :scope > .Add';
+
+function fitMain(root) {
+  const width = stageWidth();
+  const height = availableHeight();
+  root.classList.remove('wrap', 'stack');
+  root.style.maxWidth = '';
+  root.querySelectorAll(':scope > .Equal > .n').forEach((e) => { e.style.flexShrink = ''; });
+  root.style.fontSize = '';
+  const base = parseFloat(getComputedStyle(root).fontSize) * zoom;
+  const min = Math.min(base, Math.max(MIN_READABLE, base * 0.55));
+  const setSize = (px) => {
+    root.style.fontSize = `${px}px`;
+    layoutPowers(root);
+  };
+  const fits = () => root.scrollWidth <= width + 0.5 && root.scrollHeight <= height + 0.5;
+
+  setSize(base);
+  if (fits()) return;
+  const scale = Math.min(width / root.scrollWidth, height / root.scrollHeight);
+  if (base * scale >= min) return setSize(base * scale);
+
+  if (longMode === 'wrap' && root.querySelector(WRAPPABLE)) {
+    // Com um lado curto (até 40% da linha), ele fica numa linha só e o
+    // longo quebra ao lado dele. Com os dois longos, o "= lado direito"
+    // desce para baixo do lado esquerdo (.stack).
+    setSize(min);
+    const sides = [...root.querySelectorAll(':scope > .Equal > .n')];
+    const natural = sides.map((e) => e.getBoundingClientRect().width / min);
+    root.classList.add('wrap');
+    root.style.maxWidth = `${width}px`;
+    for (let size = base; ; size *= 0.9) {
+      const px = Math.max(size, min);
+      const short = Math.min(...natural) * px <= width * 0.4;
+      root.classList.toggle('stack', sides.length === 2 && !short);
+      sides.forEach((e, i) => {
+        e.style.flexShrink = short && natural[i] === Math.min(...natural) ? '0' : '';
+      });
+      setSize(px);
+      if (fits() || size <= min) return;
+    }
+  }
+  setSize(min);
+}
+
+// Altura útil do palco (descontado o quadro de passos na apresentação).
+const availableHeight = () => {
+  if (presenting) return stageHeight();
+  const cs = getComputedStyle(stage);
+  return stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+};
+
+// Esmaecimento nas bordas quando há conteúdo fora da área visível.
+function updateScrollHints() {
+  const x = stage.scrollLeft;
+  const y = stage.scrollTop;
+  stage.classList.toggle('more-left', x > 1);
+  stage.classList.toggle('more-right', x + stage.clientWidth < stage.scrollWidth - 1);
+  stage.classList.toggle('more-up', y > 1);
+  stage.classList.toggle('more-down', y + stage.clientHeight < stage.scrollHeight - 1);
+}
+
+stage.addEventListener('scroll', updateScrollHints, { passive: true });
 
 const stageWidth = () => {
   const cs = getComputedStyle(stage);
@@ -168,7 +245,7 @@ function drawFormula({ animate = false, arcKey = null, hints } = {}) {
   if (oldRoot) oldRoot.classList.add('leaving');
   drawBoard();
   stage.append(root);
-  fit(root, stageWidth(), stageHeight());
+  fitMain(root);
   applyMarks();
   if (oldRects) play({ stage, oldRoot, oldRects, newRoot: root, arcKey, hints, duration: duration() });
   oldRoot?.remove();
@@ -179,8 +256,14 @@ function applyMarks() {
   const root = stage.querySelector('.formula.main:not(.leaving)');
   root.querySelectorAll('.focus, .selected').forEach((e) => e.classList.remove('focus', 'selected'));
   const { focusId } = state();
-  root.querySelector(`[data-key="${focusId}"]`)?.classList.add('focus');
+  const focused = root.querySelector(`[data-key="${focusId}"]`);
+  focused?.classList.add('focus');
   for (const id of selected) root.querySelector(`[data-key="${id}"]`)?.classList.add('selected');
+  // Expressão maior que o palco: o foco nunca fica fora da vista.
+  if (focused && (stage.scrollWidth > stage.clientWidth || stage.scrollHeight > stage.clientHeight)) {
+    focused.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reducedMotion.matches ? 'auto' : 'smooth' });
+  }
+  updateScrollHints();
 }
 
 function drawHistory() {
@@ -192,11 +275,15 @@ function drawHistory() {
     label.className = 'step-label';
     label.textContent = fmt(step.label);
     li.append(label, staticFormula(step.tree));
+    li.tabIndex = 0;
     li.addEventListener('click', () => {
       h.goto(i);
       selected.clear();
       refresh(true);
       stage.focus();
+    });
+    li.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); li.click(); }
     });
     return li;
   }));
@@ -647,6 +734,22 @@ function applyTheme(theme) {
 
 themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
 
+function setLongMode(mode) {
+  longMode = mode === 'scroll' ? 'scroll' : 'wrap';
+  longSelect.value = longMode;
+  try { localStorage.setItem(LONG_KEY, longMode); } catch { /* sem armazenamento */ }
+  if (workspaces.length) relayout();
+}
+
+longSelect.addEventListener('change', () => setLongMode(longSelect.value));
+
+function setZoom(z) {
+  zoom = Math.min(3, Math.max(0.5, Math.round(z * 100) / 100));
+  try { localStorage.setItem(ZOOM_KEY, String(zoom)); } catch { /* sem armazenamento */ }
+  relayout();
+  toast(t('toast.zoom', { pct: Math.round(zoom * 100) }));
+}
+
 // Escolher num menu suspenso fecha o menu e devolve o foco à equação.
 document.querySelectorAll('.dropdown select').forEach((s) => s.addEventListener('change', () => {
   s.closest('details').open = false;
@@ -665,6 +768,10 @@ function toggleKeyboard(open) {
 }
 
 kbToggle.addEventListener('click', () => toggleKeyboard());
+$('#keys-toggle').addEventListener('click', () => {
+  document.querySelector('.keys').classList.toggle('expanded');
+  stage.focus();
+});
 
 // ---------- teclado ----------
 
@@ -715,6 +822,10 @@ stage.addEventListener('keydown', (ev) => {
   else if (k === 'c') cycleColor();
   else if (k === 'p') togglePresenting();
   else if (k === 'k') toggleKeyboard();
+  else if (k === '?') document.querySelector('.keys').classList.toggle('expanded');
+  else if (k === '+' || k === '=') setZoom(zoom * 1.15);
+  else if (k === '-') setZoom(zoom / 1.15);
+  else if (k === '0') setZoom(1);
   else if (k === 'l') copyText(toLatex(state().tree), 'what.latex');
   else if (k === 'e') {
     input.value = toAscii(state().tree);
@@ -746,7 +857,8 @@ input.addEventListener('input', () => { inputError.textContent = ''; });
 // tamanho da janela.
 const relayout = () => {
   stage.querySelectorAll('.board .formula').forEach((f) => fit(f, stageWidth(), stage.clientHeight * 0.2));
-  stage.querySelectorAll('.formula.main').forEach((f) => fit(f, stageWidth(), stageHeight()));
+  stage.querySelectorAll('.formula.main').forEach(fitMain);
+  updateScrollHints();
   document.querySelectorAll('.side .formula.mini').forEach((f) => fit(f, f.parentElement.clientWidth - 40));
 };
 document.fonts.ready.then(relayout);
@@ -756,6 +868,8 @@ translateDom();
 document.documentElement.lang = getLang() === 'pt' ? 'pt-BR' : 'en';
 try {
   applyTheme(localStorage.getItem(THEME_KEY) || 'auto');
+  zoom = Number(localStorage.getItem(ZOOM_KEY)) || 1;
+  setLongMode(localStorage.getItem(LONG_KEY) || 'wrap');
   if (localStorage.getItem(KB_KEY)) toggleKeyboard(true);
 } catch { /* sem armazenamento */ }
 

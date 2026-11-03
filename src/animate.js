@@ -82,7 +82,7 @@ export function play({ stage, oldRoot, oldRects, newRoot, arcKey, duration, hint
     const anc = keyedParent(e, newRoot.parentElement);
     if (anc && !known.has(anc.dataset.key) && !hasKeyedDescendantIn(anc, known)) continue;
     e.animate(
-      [{ opacity: 0, transform: 'scale(.6)' }, { opacity: 0, transform: 'scale(.6)', offset: 0.45 }, { opacity: 1, transform: 'none' }],
+      [{ opacity: 0, transform: 'scale(.85)' }, { opacity: 0, transform: 'scale(.85)', offset: 0.3 }, { opacity: 1, transform: 'none' }],
       { ...timing, easing: 'ease-out' },
     );
   }
@@ -113,8 +113,8 @@ export function play({ stage, oldRoot, oldRects, newRoot, arcKey, duration, hint
     g.classList.add('ghost');
     g.style.margin = '0';
     Object.assign(g.style, {
-      left: `${r.left - base.left}px`,
-      top: `${r.top - base.top}px`,
+      left: `${r.left - base.left + stage.scrollLeft}px`,
+      top: `${r.top - base.top + stage.scrollTop}px`,
       width: `${r.width}px`,
       height: `${r.height}px`,
     });
