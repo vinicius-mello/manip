@@ -23,7 +23,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
     --bg: #17171b;
     --panel: #202026;
     --ink: #ecebe8;
@@ -63,6 +63,72 @@
   --c3: #c995f0;
   --c4: #ffbd4a;
   --c5: #4fd2db;
+  color-scheme: dark;
+}
+
+/* Quadro verde: giz sobre lousa. */
+:root[data-theme="chalk"] {
+  --bg: #23412f;
+  --panel: #1d3727;
+  --ink: #f2f0e4;
+  --muted: #b5c4b1;
+  --line: #3c5f4b;
+  --accent: #ffd86b;
+  --focus-bg: rgba(255, 216, 107, 0.14);
+  --focus-ring: rgba(255, 216, 107, 0.65);
+  --sel-bg: rgba(142, 203, 255, 0.2);
+  --sel-ring: rgba(142, 203, 255, 0.75);
+  --error: #ffa596;
+  --c0: #ff9e8f;
+  --c1: #8ecbff;
+  --c2: #c2f2a8;
+  --c3: #e6bcff;
+  --c4: #ffd86b;
+  --c5: #8ff0e6;
+  color-scheme: dark;
+}
+
+/* Papel: tons quentes, bom para projetor em sala clara. */
+:root[data-theme="paper"] {
+  --bg: #f4ecd8;
+  --panel: #fbf6ea;
+  --ink: #33281a;
+  --muted: #7a6a52;
+  --line: #e0d2b4;
+  --accent: #9c4a1a;
+  --focus-bg: rgba(156, 74, 26, 0.10);
+  --focus-ring: rgba(156, 74, 26, 0.5);
+  --sel-bg: rgba(46, 95, 138, 0.16);
+  --sel-ring: rgba(46, 95, 138, 0.6);
+  --error: #b3261e;
+  --c0: #b8401f;
+  --c1: #2e5f8a;
+  --c2: #4b7a2a;
+  --c3: #7a3f8a;
+  --c4: #a86b00;
+  --c5: #1f7a78;
+  color-scheme: light;
+}
+
+/* Alto contraste. */
+:root[data-theme="contrast"] {
+  --bg: #000000;
+  --panel: #0d0d0d;
+  --ink: #ffffff;
+  --muted: #d6d6d6;
+  --line: #707070;
+  --accent: #ffd400;
+  --focus-bg: rgba(255, 212, 0, 0.2);
+  --focus-ring: #ffd400;
+  --sel-bg: rgba(0, 200, 255, 0.3);
+  --sel-ring: #00c8ff;
+  --error: #ff6b6b;
+  --c0: #ff6b6b;
+  --c1: #4dc3ff;
+  --c2: #5dff8a;
+  --c3: #e08bff;
+  --c4: #ffd400;
+  --c5: #2ef2e5;
   color-scheme: dark;
 }
 
@@ -118,8 +184,9 @@ body {
 .error { color: var(--error); font-size: 14px; }
 .error:empty { display: none; }
 
-.speed { color: var(--muted); font-size: 14px; display: flex; gap: 8px; align-items: center; }
-.speed select {
+.settings { gap: 2px; }
+.settings label { color: var(--muted); display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 6px 8px; }
+.settings select {
   font: inherit;
   color: var(--ink);
   background: var(--panel);
@@ -174,7 +241,7 @@ body {
 
 /* Botões da barra superior */
 .tool,
-.export summary {
+.dropdown summary {
   font: 14px/1.3 var(--ui);
   cursor: pointer;
   color: var(--muted);
@@ -187,11 +254,11 @@ body {
 .tool[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 
 /* Exportar */
-.export { position: relative; font-size: 14px; }
-.export summary { list-style: none; }
-.export summary::-webkit-details-marker { display: none; }
-.export[open] summary { color: var(--ink); }
-.export-menu {
+.dropdown { position: relative; font-size: 14px; }
+.dropdown summary { list-style: none; }
+.dropdown summary::-webkit-details-marker { display: none; }
+.dropdown[open] summary { color: var(--ink); }
+.dropdown-menu {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
@@ -205,7 +272,7 @@ body {
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
 }
-.export-menu button {
+.dropdown-menu button {
   font: inherit;
   text-align: left;
   color: var(--ink);
@@ -215,7 +282,7 @@ body {
   padding: 7px 10px;
   cursor: pointer;
 }
-.export-menu button:hover { background: var(--focus-bg); }
+.dropdown-menu button:hover { background: var(--focus-bg); }
 
 #stage {
   position: relative;
@@ -519,7 +586,8 @@ kbd {
   margin: 0 .06em;
 }
 
-.fname { display: inline-block; font-style: normal; margin-right: .12em; }
+.fname { display: inline-block; font-style: normal; margin: 0 .12em 0 .1em; }
+.func:first-child > .fname, .Equal > .func > .fname { margin-left: 0; }
 
 /* Nomes colapsados: "chips" */
 .formula .n.chip {

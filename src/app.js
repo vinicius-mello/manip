@@ -16,6 +16,7 @@ import { shiftSideways, shiftOut, shiftIn } from './moves.js';
 import { History } from './history.js';
 import { applicable } from './rules/index.js';
 import { createKeyboard } from './keyboard.js';
+import { t, msg, fmt, LANGS, getLang, setLang, onLangChange, translateDom } from './i18n.js';
 
 const COLORS = 6;
 const STORAGE_KEY = 'manip.state.v3';
@@ -34,7 +35,10 @@ const speedSelect = $('#speed');
 const menuEl = $('#menu');
 const fileInput = $('#file');
 const kbToggle = $('#kb-toggle');
+const themeSelect = $('#theme');
+const langSelect = $('#lang');
 const KB_KEY = 'manip.keyboard';
+const THEME_KEY = 'manip.theme';
 
 let workspaces = [];
 let active = 0;
@@ -83,7 +87,7 @@ function define({ name, def, chipId }, tree) {
   const path = findPath(tree, chipId);
   const tree2 = replaceAt(tree, path, { ...getAt(tree, path), color });
   const eq = fn('Equal', chip(name, color), cloneFresh(def));
-  workspaces.push(newWorkspace(name, name, eq, 'definição', { def: cloneFresh(def), color }));
+  workspaces.push(newWorkspace(name, name, eq, msg('step.definition'), { def: cloneFresh(def), color }));
   return tree2;
 }
 
@@ -186,7 +190,7 @@ function drawHistory() {
     li.className = i === h.index ? 'current' : i > h.index ? 'future' : '';
     const label = document.createElement('span');
     label.className = 'step-label';
-    label.textContent = step.label;
+    label.textContent = fmt(step.label);
     li.append(label, staticFormula(step.tree));
     li.addEventListener('click', () => {
       h.goto(i);
@@ -207,7 +211,7 @@ function drawTabs() {
     b.type = 'button';
     b.className = 'tab' + (i === active ? ' active' : '');
     if (w.color !== undefined) b.classList.add('c' + w.color);
-    b.textContent = w.title;
+    b.textContent = w.id === 'main' ? t('tab.main') : w.title;
     b.addEventListener('click', () => { switchTo(i); stage.focus(); });
     return b;
   }));
@@ -219,7 +223,7 @@ function drawNames() {
   namesList.replaceChildren(...nameSpaces().map((w) => {
     const li = document.createElement('li');
     li.append(staticFormula(fn('Equal', chip(w.id, w.color), defs[w.id])));
-    li.title = `Abrir ${w.id}`;
+    li.title = t('names.open', { name: w.id });
     li.addEventListener('click', () => { switchTo(workspaces.indexOf(w)); stage.focus(); });
     return li;
   }));
@@ -315,7 +319,7 @@ function cycleColor() {
   const node = { ...n };
   if (next >= COLORS) delete node.color;
   else node.color = next;
-  const step = { tree: replaceAt(state().tree, path, node), focusId: n.id, label: 'mudou a cor', colorOf: n.id };
+  const step = { tree: replaceAt(state().tree, path, node), focusId: n.id, label: msg('step.color'), colorOf: n.id };
   // Apertar C várias vezes no mesmo nó gera um passo só.
   if (state().colorOf === n.id && history().index > 0) history().replaceCurrent(step);
   else history().push(step);
@@ -325,7 +329,7 @@ function cycleColor() {
 async function copyText(text, what) {
   try {
     await navigator.clipboard.writeText(text);
-    toast(`${what} copiado`);
+    toast(t('toast.copied', { what: t(what) }));
   } catch {
     toast(text);
   }
@@ -336,7 +340,7 @@ function togglePresenting() {
   document.body.classList.toggle('presenting', presenting);
   closeMenu();
   refresh(false);
-  if (presenting) toast('Apresentação: P ou Esc para sair · PgUp/PgDn percorrem os passos');
+  if (presenting) toast(t('toast.presenting'));
 }
 
 // Texto digitado no campo principal: na área principal começa um problema
@@ -347,16 +351,16 @@ function load(text) {
     tree = parseInput(text);
   } catch (err) {
     if (!(err instanceof ParseError)) throw err;
-    inputError.textContent = err.message;
+    inputError.textContent = t(err.key, err.params);
     input.setSelectionRange(err.pos, Math.min(err.pos + 1, text.length));
     return false;
   }
   inputError.textContent = '';
   selected.clear();
   if (active === 0) {
-    workspaces = [newWorkspace('main', 'Principal', tree, 'entrada')];
+    workspaces = [newWorkspace('main', 'Principal', tree, msg('step.input'))];
   } else {
-    history().push({ tree, focusId: (tree.args?.[0] ?? tree).id, label: 'entrada' });
+    history().push({ tree, focusId: (tree.args?.[0] ?? tree).id, label: msg('step.input') });
   }
   refresh(false);
   return true;
@@ -382,7 +386,7 @@ function openMenu(ruleId) {
   const direct = ruleId ? items.findIndex((x) => x.rule.id === ruleId) : 0;
   if (direct < 0) return bump();
   if (!items.length) {
-    toast('Nenhuma operação se aplica aqui');
+    toast(t('toast.noOps'));
     return;
   }
   menu = { items, index: direct, input: !!ruleId, inputText: '' };
@@ -408,7 +412,7 @@ function drawMenu() {
     li.className = i === index ? 'active' : '';
     const k = document.createElement('kbd');
     k.textContent = rule.key;
-    li.append(k, rule.label);
+    li.append(k, t(`rule.${rule.id}`));
     li.addEventListener('mousemove', () => {
       if (menu.index !== i && !menu.input) { menu.index = i; drawMenu(); }
     });
@@ -425,7 +429,7 @@ function drawMenu() {
   if (rule.input && menu.input) {
     const inp = document.createElement('input');
     inp.className = 'menu-input';
-    inp.placeholder = rule.input.placeholder;
+    inp.placeholder = t(`rule.${rule.id}.ph`);
     inp.spellcheck = false;
     inp.value = menu.inputText;
     inp.addEventListener('input', () => {
@@ -453,7 +457,7 @@ function drawMenu() {
   }
 
   if (result?.tree) box.append(staticFormula(result.tree));
-  else box.append(hintEl(rule.input ? 'Enter para digitar' : result?.label ?? ''));
+  else box.append(hintEl(rule.input ? t('menu.enterToType') : result?.label ? fmt(result.label) : ''));
   box.querySelectorAll('.formula.mini').forEach((f) => fit(f, 320));
   positionMenu();
 }
@@ -462,7 +466,7 @@ function updateInputPreview(box, text) {
   box.querySelector('.formula, .hint')?.remove();
   const { rule } = menu.items[menu.index];
   const r = text.trim() ? rule.run(ruleContext(text)) : null;
-  box.append(r?.tree ? staticFormula(r.tree) : hintEl(rule.input.hint));
+  box.append(r?.tree ? staticFormula(r.tree) : hintEl(t(`rule.${rule.id}.hint`)));
   box.querySelectorAll('.formula.mini').forEach((f) => fit(f, 320));
 }
 
@@ -542,7 +546,7 @@ function serialize() {
 }
 
 function deserialize(data) {
-  if (data?.format !== 'manip' || !data.workspaces?.length) throw new Error('arquivo inválido');
+  if (data?.format !== 'manip' || !data.workspaces?.length) throw new Error(t('err.invalidFile'));
   workspaces = data.workspaces.map((w) => {
     const h = new History();
     for (const s of w.steps) {
@@ -583,8 +587,8 @@ function stepsLatex() {
 }
 
 const EXPORTS = {
-  'latex-steps': () => copyText(stepsLatex(), 'LaTeX dos passos'),
-  mathjson: () => copyText(JSON.stringify(toMathJson(state().tree)), 'MathJSON'),
+  'latex-steps': () => copyText(stepsLatex(), 'what.latexSteps'),
+  mathjson: () => copyText(JSON.stringify(toMathJson(state().tree)), 'what.mathjson'),
   save: () => {
     const blob = new Blob([JSON.stringify(serialize(), null, 2)], { type: 'application/json' });
     const a = Object.assign(document.createElement('a'), {
@@ -610,12 +614,44 @@ fileInput.addEventListener('change', async () => {
     deserialize(JSON.parse(await file.text()));
     input.value = toAscii(state().tree);
     refresh(false);
-    toast(`Aberto: ${file.name}`);
+    toast(t('toast.opened', { name: file.name }));
   } catch (err) {
-    toast(`Não foi possível abrir: ${err.message}`);
+    toast(t('toast.openFail', { err: err.message }));
   }
   stage.focus();
 });
+
+// ---------- idioma e tema ----------
+
+langSelect.replaceChildren(...Object.entries(LANGS).map(([code, name]) =>
+  Object.assign(document.createElement('option'), { value: code, textContent: name })));
+langSelect.value = getLang();
+langSelect.addEventListener('change', () => setLang(langSelect.value));
+
+// Trocar o idioma redesenha tudo: rótulos dos passos e nomes de funções
+// (sen/sin) dependem dele.
+onLangChange(() => {
+  translateDom();
+  closeMenu();
+  keyboard.redraw();
+  if (workspaces.length) refresh(false);
+});
+
+// "auto" segue o sistema (claro/escuro); os demais fixam o tema.
+function applyTheme(theme) {
+  if (theme === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
+  themeSelect.value = theme;
+  try { localStorage.setItem(THEME_KEY, theme); } catch { /* sem armazenamento */ }
+}
+
+themeSelect.addEventListener('change', () => applyTheme(themeSelect.value));
+
+// Escolher num menu suspenso fecha o menu e devolve o foco à equação.
+document.querySelectorAll('.dropdown select').forEach((s) => s.addEventListener('change', () => {
+  s.closest('details').open = false;
+  stage.focus();
+}));
 
 // ---------- teclado na tela ----------
 
@@ -679,7 +715,7 @@ stage.addEventListener('keydown', (ev) => {
   else if (k === 'c') cycleColor();
   else if (k === 'p') togglePresenting();
   else if (k === 'k') toggleKeyboard();
-  else if (k === 'l') copyText(toLatex(state().tree), 'LaTeX');
+  else if (k === 'l') copyText(toLatex(state().tree), 'what.latex');
   else if (k === 'e') {
     input.value = toAscii(state().tree);
     input.focus();
@@ -716,7 +752,10 @@ const relayout = () => {
 document.fonts.ready.then(relayout);
 addEventListener('resize', relayout);
 
+translateDom();
+document.documentElement.lang = getLang() === 'pt' ? 'pt-BR' : 'en';
 try {
+  applyTheme(localStorage.getItem(THEME_KEY) || 'auto');
   if (localStorage.getItem(KB_KEY)) toggleKeyboard(true);
 } catch { /* sem armazenamento */ }
 

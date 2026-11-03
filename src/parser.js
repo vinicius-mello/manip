@@ -8,9 +8,13 @@
 
 import { num, sym, fn } from './ast.js';
 
+// A mensagem é uma chave de i18n.js (com parâmetros), traduzida na hora de
+// mostrar.
 export class ParseError extends Error {
-  constructor(message, pos) {
-    super(message);
+  constructor(key, pos, params = {}) {
+    super(key);
+    this.key = key;
+    this.params = params;
     this.pos = pos;
   }
 }
@@ -26,7 +30,7 @@ export function parseTokens(toks) {
   const expect = (t) => {
     const tok = next();
     if (tok.t !== t) {
-      throw new ParseError(tok.t === 'end' ? `Faltou “${t}”` : `Esperava “${t}”`, tok.pos);
+      throw new ParseError(tok.t === 'end' ? 'err.missing' : 'err.expected', tok.pos, { t });
     }
     return tok;
   };
@@ -85,7 +89,7 @@ export function parseTokens(toks) {
       case 'fn': {
         const arity = ARITY[tok.v] ?? 1;
         if (peek().t !== '(') {
-          if (arity !== 1) throw new ParseError('Faltou “(”', peek().pos);
+          if (arity !== 1) throw new ParseError('err.missing', peek().pos, { t: '(' });
           return fn(tok.v, peek().t === '{' ? braced() : power());
         }
         next();
@@ -93,7 +97,7 @@ export function parseTokens(toks) {
         while (peek().t === ',') { next(); args.push(expr()); }
         const close = expect(')');
         if (args.length !== arity) {
-          throw new ParseError(`Esperava ${arity} argumento(s)`, close.pos);
+          throw new ParseError('err.arity', close.pos, { n: arity });
         }
         return fn(tok.v, ...args);
       }
@@ -119,8 +123,8 @@ export function parseTokens(toks) {
         }
         return fn('Sqrt', peek().t === '{' ? braced() : atom());
       }
-      case 'end': throw new ParseError('Expressão incompleta', tok.pos);
-      default: throw new ParseError(`“${tok.t}” inesperado`, tok.pos);
+      case 'end': throw new ParseError('err.incomplete', tok.pos);
+      default: throw new ParseError('err.unexpected', tok.pos, { t: tok.t });
     }
   }
 
@@ -130,6 +134,6 @@ export function parseTokens(toks) {
     next();
     root = fn('Equal', lhs, expr());
   }
-  if (peek().t !== 'end') throw new ParseError(`“${peek().t}” inesperado`, peek().pos);
+  if (peek().t !== 'end') throw new ParseError('err.unexpected', peek().pos, { t: peek().t });
   return root;
 }

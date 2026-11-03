@@ -23,8 +23,8 @@ test('LaTeX básico', () => {
 });
 
 test('erros de LaTeX', () => {
-  assert.throws(() => parseLatex('\\foo{x}'), /desconhecido/);
-  assert.throws(() => parseLatex('\\frac{1}'), /Faltou/);
+  assert.throws(() => parseLatex('\\foo{x}'), { key: 'err.unknownCmd', params: { name: 'foo' } });
+  assert.throws(() => parseLatex('\\frac{1}'), { key: 'err.missing' });
 });
 
 test('ida e volta: toLatex → parseLatex', () => {

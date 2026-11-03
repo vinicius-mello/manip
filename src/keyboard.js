@@ -8,9 +8,12 @@
 
 import { parseInput, isLatex } from './input.js';
 import { render, layoutPowers } from './render.js';
+import { FUNCTIONS } from './ast.js';
+import { t, functionLabel, getLang } from './i18n.js';
 
 const k = (label, ascii, latex = ascii, cls = '') => ({ label, ascii, latex, cls });
-const fnKey = (name) => k(name, `${name}(|)`, `\\${name}\\left(|\\right)`, 'fn');
+// Rótulo calculado na hora de desenhar: "sen" em português, "sin" em inglês.
+const fnKey = (name) => k(() => functionLabel(FUNCTIONS[name], name), `${name}(|)`, `\\${name}\\left(|\\right)`, 'fn');
 const greek = (name, char) => k(char, name, `\\${name} `, 'math');
 
 // Rótulos com HTML simples para ficarem parecidos com a notação.
@@ -26,7 +29,7 @@ const PAGES = {
     [k('7', '7'), k('8', '8'), k('9', '9'), k('+', '+', '+', 'op'), k('−', '-', '-', 'op'), k(FRAC, '(|)/()', '\\frac{|}{}', 'op')],
     [k('4', '4'), k('5', '5'), k('6', '6'), k('·', '*', ' \\cdot ', 'op'), k('÷', '/', ' \\div ', 'op'), k(POW2, '^2', '^{2}', 'op')],
     [k('1', '1'), k('2', '2'), k('3', '3'), k('(', '(', '\\left(', 'op'), k(')', ')', '\\right)', 'op'), k(POWN, '^(|)', '^{|}', 'op')],
-    [k('0', '0'), k(',', '.', '.'), k('=', ' = ', ' = ', 'op'), k('<i>x</i>', 'x', 'x', 'math'), k('<i>y</i>', 'y', 'y', 'math'), k(SQRT, 'sqrt(|)', '\\sqrt{|}', 'op')],
+    [k('0', '0'), k(() => (getLang() === 'pt' ? ',' : '.'), '.', '.'), k('=', ' = ', ' = ', 'op'), k('<i>x</i>', 'x', 'x', 'math'), k('<i>y</i>', 'y', 'y', 'math'), k(SQRT, 'sqrt(|)', '\\sqrt{|}', 'op')],
   ],
   abc: [
     ['a', 'b', 'c', 'd', 'k', 'm', 'n'].map((c) => k(`<i>${c}</i>`, c, c, 'math')),
@@ -142,13 +145,14 @@ export function createKeyboard(panel, { fallback }) {
     tabs.replaceChildren(...Object.keys(PAGES).map((name) =>
       button(name, name === page ? 'tab active' : 'tab', () => { page = name; draw(); })));
     grid.style.setProperty('--cols', Math.max(...PAGES[page].map((r) => r.length)));
-    grid.replaceChildren(...PAGES[page].flat().map((key) => button(key.label, key.cls, () => insert(key))));
+    const label = (key) => (typeof key.label === 'function' ? key.label() : key.label);
+    grid.replaceChildren(...PAGES[page].flat().map((key) => button(label(key), key.cls, () => insert(key))));
     side.replaceChildren(
-      button('←', 'nav', () => edit('left'), 'cursor para a esquerda'),
-      button('→', 'nav', () => edit('right'), 'cursor para a direita'),
-      button('⌫', 'nav', () => edit('back'), 'apagar'),
-      button('⇥', 'nav', () => edit('next'), 'próximo campo (Tab)'),
-      button('⏎', 'nav enter', () => edit('enter'), 'confirmar'),
+      button('←', 'nav', () => edit('left'), t('kb.left')),
+      button('→', 'nav', () => edit('right'), t('kb.right')),
+      button('⌫', 'nav', () => edit('back'), t('kb.back')),
+      button('⇥', 'nav', () => edit('next'), t('kb.next')),
+      button('⏎', 'nav enter', () => edit('enter'), t('kb.enter')),
     );
   }
 
@@ -156,7 +160,7 @@ export function createKeyboard(panel, { fallback }) {
   function updatePreview() {
     const text = field().value.trim();
     if (!text) {
-      preview.replaceChildren(Object.assign(document.createElement('span'), { className: 'hint', textContent: 'prévia da fórmula' }));
+      preview.replaceChildren(Object.assign(document.createElement('span'), { className: 'hint', textContent: t('kb.preview') }));
       return;
     }
     try {
@@ -166,7 +170,7 @@ export function createKeyboard(panel, { fallback }) {
       preview.replaceChildren(f);
       layoutPowers(f);
     } catch (err) {
-      preview.replaceChildren(Object.assign(document.createElement('span'), { className: 'hint', textContent: err.message }));
+      preview.replaceChildren(Object.assign(document.createElement('span'), { className: 'hint', textContent: err.key ? t(err.key, err.params) : err.message }));
     }
   }
 
@@ -177,6 +181,10 @@ export function createKeyboard(panel, { fallback }) {
 
   draw();
   return {
+    redraw() {
+      draw();
+      if (!panel.hidden) updatePreview();
+    },
     toggle(open = panel.hidden) {
       panel.hidden = !open;
       document.body.classList.toggle('kb-open', open);

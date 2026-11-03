@@ -32,9 +32,9 @@ test('funções, gregas e subscritos', () => {
 });
 
 test('erros de parsing', () => {
-  assert.throws(() => parseAscii('2x +'), /incompleta/);
-  assert.throws(() => parseAscii('(x'), /Faltou/);
-  assert.throws(() => parseAscii('x $ 2'), /inesperado/);
+  assert.throws(() => parseAscii('2x +'), { key: 'err.incomplete' });
+  assert.throws(() => parseAscii('(x'), { key: 'err.missing', params: { t: ')' } });
+  assert.throws(() => parseAscii('x $ 2'), { key: 'err.unexpectedChar', params: { c: '$' } });
 });
 
 test('ida e volta ASCII e MathJSON', () => {

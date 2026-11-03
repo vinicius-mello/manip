@@ -82,6 +82,12 @@ export const FUNCTION_NAMES = Object.fromEntries(
   Object.entries(FUNCTIONS).map(([k, v]) => [v, k]),
 );
 
+// Grafias brasileiras aceitas na entrada (sen x, tg x, \\sen...).
+Object.assign(FUNCTIONS, {
+  sen: 'Sin', tg: 'Tan', cotg: 'Cot', cossec: 'Csc',
+  arcsen: 'Arcsin', arctg: 'Arctan', senh: 'Sinh', tgh: 'Tanh',
+});
+
 export const GREEK = [
   'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota',
   'kappa', 'lambda', 'mu', 'nu', 'xi', 'pi', 'rho', 'sigma', 'tau', 'upsilon',

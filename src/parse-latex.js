@@ -30,7 +30,7 @@ function tokenize(src) {
         if (ch === '{') push('(', i);
         else if (ch === '}') push(')', i);
         else if (ch === '\\' || ',;:! '.includes(ch)) { /* espaçamento ou quebra */ }
-        else throw new ParseError(`Comando “\\${ch ?? ''}” desconhecido`, i);
+        else throw new ParseError('err.unknownCmd', i, { name: ch ?? '' });
         i += 2;
         continue;
       }
@@ -39,11 +39,11 @@ function tokenize(src) {
       else if (FUNCTIONS[name]) push('fn', i, FUNCTIONS[name]);
       else if (name === 'operatorname') {
         const op = /^\{([A-Za-z]+)\}/.exec(src.slice(i + 13));
-        if (!op || !FUNCTIONS[op[1]]) throw new ParseError('Função desconhecida', i);
+        if (!op || !FUNCTIONS[op[1]]) throw new ParseError('err.unknownFn', i);
         push('fn', i, FUNCTIONS[op[1]]);
         i += 13 + op[0].length;
         continue;
-      } else if (!SPACING.has(name)) throw new ParseError(`Comando “\\${name}” desconhecido`, i);
+      } else if (!SPACING.has(name)) throw new ParseError('err.unknownCmd', i, { name });
       if (name === 'left' || name === 'right') {
         // \left. e \right. são delimitadores vazios
         if (src[i + 1 + name.length] === '.') i++;
@@ -63,9 +63,9 @@ function tokenize(src) {
       i++;
     } else if (c === '_') {
       const last = toks[toks.length - 1];
-      if (last?.t !== 'id') throw new ParseError('Subscrito sem variável', i);
+      if (last?.t !== 'id') throw new ParseError('err.subNoVar', i);
       m = /^_(\{([^{}]*)\}|([A-Za-z0-9]))/.exec(src.slice(i));
-      if (!m) throw new ParseError('Subscrito inválido', i);
+      if (!m) throw new ParseError('err.badSub', i);
       last.v += '_' + (m[2] ?? m[3]).replace(/\s+/g, '');
       i += m[0].length;
     } else if (c === '[') {
@@ -79,7 +79,7 @@ function tokenize(src) {
       push(CHARS[c] ?? c, i);
       i++;
     } else {
-      throw new ParseError(`Caractere inesperado “${c}”`, i);
+      throw new ParseError('err.unexpectedChar', i, { c });
     }
   }
   push('end', src.length);

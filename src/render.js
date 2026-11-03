@@ -6,6 +6,7 @@
 
 import { GREEK, FUNCTION_NAMES } from './ast.js';
 import { needsParens, needsDot } from './notation.js';
+import { functionLabel } from './i18n.js';
 
 const GREEK_CHARS = {
   alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', zeta: 'ζ', eta: 'η',
@@ -122,7 +123,7 @@ export function render(n, parent = null, index = 0) {
       e.append(wrapParens(kid(n.args[0], 0), n.id));
       break;
     default: {
-      const name = FUNCTION_NAMES[n.op] ?? n.op;
+      const name = functionLabel(n.op, FUNCTION_NAMES[n.op] ?? n.op);
       e.classList.add('func');
       e.append(el('span', 'fname', n.id + 'f', name), ...n.args.map(kid));
     }

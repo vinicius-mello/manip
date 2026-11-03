@@ -24,7 +24,7 @@ function tokenize(src) {
       toks.push({ t: v, pos: i });
       m = [c];
     } else {
-      throw new ParseError(`Caractere inesperado “${c}”`, i);
+      throw new ParseError('err.unexpectedChar', i, { c });
     }
     i += m[0].length;
   }
@@ -56,7 +56,7 @@ function splitWord(word, pos, toks) {
   }
   if (sub !== undefined) {
     const last = toks[toks.length - 1];
-    if (last.t !== 'id') throw new ParseError('Subscrito sem variável', pos);
+    if (last.t !== 'id') throw new ParseError('err.subNoVar', pos);
     last.v += '_' + sub;
   }
 }

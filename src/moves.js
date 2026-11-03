@@ -5,6 +5,7 @@
 // Nenhum movimento calcula nada: só reorganiza e insere operações.
 
 import { getAt, replaceAt, withArgs, fn, num } from './ast.js';
+import { msg } from './i18n.js';
 
 const terms = (n) => (n.op === 'Add' ? n.args : [n]);
 const factors = (n) => (n.op === 'Multiply' ? n.args : [n]);
@@ -29,7 +30,7 @@ function swap(tree, path, dir) {
   if (j < 0 || j >= parent.args.length) return null;
   const args = parent.args.slice();
   [args[i], args[j]] = [args[j], args[i]];
-  return { tree: replaceAt(tree, pp, withArgs(parent, args)), label: 'reordenou', arc: null };
+  return { tree: replaceAt(tree, pp, withArgs(parent, args)), label: msg('step.reorder'), arc: null };
 }
 
 // Passa um termo, fator ou denominador para o outro lado da equação.
@@ -55,7 +56,7 @@ function transpose(tree, path, dir) {
 
   if (path.length === 1) {
     const moved = negate(side);
-    return build(num(0), insertTerm(moved), 'passou o lado inteiro', core(side).id, moved.id);
+    return build(num(0), insertTerm(moved), msg('step.transposeSide'), core(side).id, moved.id);
   }
 
   const i = path[1];
@@ -64,16 +65,16 @@ function transpose(tree, path, dir) {
     case 'Add': {
       const rest = side.args.filter((_, k) => k !== i);
       const moved = negate(node);
-      return build(rebuild('Add', rest, side), insertTerm(moved), 'passou o termo para o outro lado', core(node).id, moved.id);
+      return build(rebuild('Add', rest, side), insertTerm(moved), msg('step.transposeTerm'), core(node).id, moved.id);
     }
     case 'Multiply': {
       const rest = side.args.filter((_, k) => k !== i);
-      return build(rebuild('Multiply', rest, side), fn('Divide', other, node), 'passou o fator dividindo', node.id);
+      return build(rebuild('Multiply', rest, side), fn('Divide', other, node), msg('step.transposeFactor'), node.id);
     }
     case 'Divide': {
       if (i !== 1) return null;
       const newOther = rebuild('Multiply', [...factors(other), node], other);
-      return build(side.args[0], newOther, 'passou o denominador multiplicando', node.id);
+      return build(side.args[0], newOther, msg('step.transposeDen'), node.id);
     }
     default:
       return null;
@@ -113,7 +114,7 @@ export function shiftOut(tree, path) {
   const args = outerNow.args.slice();
   args.splice(g + 1, 0, node);
   t = replaceAt(t, outerPath, withArgs(outerNow, args));
-  return { tree: t, label: 'tirou do grupo', arc: null };
+  return { tree: t, label: msg('step.ungroup'), arc: null };
 }
 
 // Shift+↓: coloca o nó dentro do grupo vizinho (preferindo o da direita).
@@ -136,7 +137,7 @@ export function shiftIn(tree, path) {
     args[j] = grouped;
     args.splice(i, 1);
     const newParent = rebuild(parent.op, args, parent);
-    return { tree: replaceAt(tree, pp, newParent), label: 'colocou no grupo', arc: null };
+    return { tree: replaceAt(tree, pp, newParent), label: msg('step.intoGroup'), arc: null };
   }
   return null;
 }

@@ -13,27 +13,47 @@
   <header class="top">
     <h1>Manip</h1>
     <label class="entry">
-      <span class="sr">Equação</span>
-      <input id="input" type="text" spellcheck="false" autocomplete="off"
-             placeholder="Digite uma equação em ASCII ou LaTeX, ex.: 2x + 3 = 7">
+      <span class="sr" data-i18n="ui.input">Equação</span>
+      <input id="input" type="text" spellcheck="false" autocomplete="off" data-i18n-placeholder="ui.input.ph">
     </label>
     <span id="input-error" class="error" role="alert"></span>
-    <label class="speed">
-      Animação
-      <select id="speed">
-        <option value="480">normal</option>
-        <option value="1000">aula (lenta)</option>
-        <option value="0">desligada</option>
-      </select>
-    </label>
-    <button id="kb-toggle" class="tool" type="button" aria-pressed="false" title="Teclado matemático (K)">Teclado</button>
-    <details class="export">
-      <summary>Exportar</summary>
-      <div class="export-menu">
-        <button type="button" data-export="latex-steps">Copiar LaTeX dos passos</button>
-        <button type="button" data-export="mathjson">Copiar MathJSON</button>
-        <button type="button" data-export="save">Salvar arquivo .json</button>
-        <button type="button" data-export="open">Abrir arquivo .json</button>
+    <button id="kb-toggle" class="tool" type="button" aria-pressed="false"
+            data-i18n="ui.keyboard" data-i18n-title="ui.keyboard.title">Teclado</button>
+    <details class="dropdown">
+      <summary data-i18n="ui.settings">Ajustes</summary>
+      <div class="dropdown-menu settings">
+        <label>
+          <span data-i18n="ui.speed">Animação</span>
+          <select id="speed">
+            <option value="480" data-i18n="ui.speed.normal">normal</option>
+            <option value="1000" data-i18n="ui.speed.slow">aula (lenta)</option>
+            <option value="0" data-i18n="ui.speed.off">desligada</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="ui.theme">Tema</span>
+          <select id="theme">
+            <option value="auto" data-i18n="theme.auto">automático</option>
+            <option value="light" data-i18n="theme.light">claro</option>
+            <option value="dark" data-i18n="theme.dark">escuro</option>
+            <option value="chalk" data-i18n="theme.chalk">quadro verde</option>
+            <option value="paper" data-i18n="theme.paper">papel</option>
+            <option value="contrast" data-i18n="theme.contrast">alto contraste</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="ui.lang">Idioma</span>
+          <select id="lang"></select>
+        </label>
+      </div>
+    </details>
+    <details class="dropdown">
+      <summary data-i18n="ui.export">Exportar</summary>
+      <div class="dropdown-menu">
+        <button type="button" data-export="latex-steps" data-i18n="ui.export.latex"></button>
+        <button type="button" data-export="mathjson" data-i18n="ui.export.mathjson"></button>
+        <button type="button" data-export="save" data-i18n="ui.export.save"></button>
+        <button type="button" data-export="open" data-i18n="ui.export.open"></button>
       </div>
     </details>
     <input id="file" type="file" accept=".json,application/json" hidden>
@@ -41,37 +61,37 @@
 
   <main class="layout">
     <div class="work">
-      <nav id="tabs" class="tabs" aria-label="Áreas de trabalho"></nav>
-      <section id="stage" tabindex="0" aria-label="Equação: use as setas para navegar"></section>
+      <nav id="tabs" class="tabs" data-i18n-aria="ui.tabs"></nav>
+      <section id="stage" tabindex="0" data-i18n-aria="ui.stage"></section>
     </div>
     <aside class="side">
       <section id="names-panel" hidden>
-        <h2>Nomes</h2>
+        <h2 data-i18n="ui.names">Nomes</h2>
         <ul id="names"></ul>
       </section>
-      <h2>Passos</h2>
+      <h2 data-i18n="ui.steps">Passos</h2>
       <ol id="history"></ol>
     </aside>
   </main>
 
-  <section id="keyboard" class="keyboard" aria-label="Teclado matemático" hidden></section>
+  <section id="keyboard" class="keyboard" data-i18n-aria="ui.kbd" hidden></section>
 
   <footer class="keys">
-    <span><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> navegar</span>
-    <span><kbd>Ctrl</kbd>+<kbd>←</kbd><kbd>→</kbd> mover / passar para o outro lado</span>
-    <span><kbd>Ctrl</kbd>+<kbd>↑</kbd><kbd>↓</kbd> sair / entrar no grupo</span>
-    <span><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> selecionar vizinhos</span>
-    <span><kbd>Espaço</kbd> selecionar</span>
-    <span><kbd>Enter</kbd> operações</span>
-    <span><kbd>S</kbd> substituir</span>
-    <span><kbd>N</kbd> dar nome</span>
-    <span><kbd>Tab</kbd> áreas de trabalho</span>
-    <span><kbd>C</kbd> colorir</span>
-    <span><kbd>E</kbd> editar</span>
-    <span><kbd>L</kbd> copiar LaTeX</span>
-    <span><kbd>P</kbd> apresentação</span>
-    <span><kbd>K</kbd> teclado</span>
-    <span><kbd>Ctrl</kbd>+<kbd>Z</kbd> desfazer</span>
+    <span><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> <span data-i18n="keys.nav"></span></span>
+    <span><kbd>Ctrl</kbd>+<kbd>←</kbd><kbd>→</kbd> <span data-i18n="keys.move"></span></span>
+    <span><kbd>Ctrl</kbd>+<kbd>↑</kbd><kbd>↓</kbd> <span data-i18n="keys.group"></span></span>
+    <span><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> <span data-i18n="keys.extend"></span></span>
+    <span><kbd data-i18n="keys.space">Espaço</kbd> <span data-i18n="keys.select"></span></span>
+    <span><kbd>Enter</kbd> <span data-i18n="keys.ops"></span></span>
+    <span><kbd>S</kbd> <span data-i18n="keys.subst"></span></span>
+    <span><kbd>N</kbd> <span data-i18n="keys.name"></span></span>
+    <span><kbd>Tab</kbd> <span data-i18n="keys.tabs"></span></span>
+    <span><kbd>C</kbd> <span data-i18n="keys.color"></span></span>
+    <span><kbd>E</kbd> <span data-i18n="keys.edit"></span></span>
+    <span><kbd>L</kbd> <span data-i18n="keys.latex"></span></span>
+    <span><kbd>P</kbd> <span data-i18n="keys.present"></span></span>
+    <span><kbd>K</kbd> <span data-i18n="keys.keyboard"></span></span>
+    <span><kbd>Ctrl</kbd>+<kbd>Z</kbd> <span data-i18n="keys.undo"></span></span>
   </footer>
 
   <div id="menu" class="menu" tabindex="-1" role="menu" hidden></div>

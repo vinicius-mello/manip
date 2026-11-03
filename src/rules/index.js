@@ -1,12 +1,13 @@
 // Engine simbólico próprio: cada regra é uma transformação pequena e
 // explícita, escolhida pelo usuário no menu contextual.
 //
-// Regra: { id, key, label, run(ctx) → resultado | null }
+// Regra: { id, key, run(ctx) → resultado | null }  (nome no menu: i18n "rule.<id>")
 //   ctx = { tree, focus: caminho, targets: caminhos (seleção ou [foco]),
 //           input?, definitions?: { nome: árvore } }
 //   resultado = { tree?, label, focus?: id, hints?, action? }
 // Uma regra se aplica quando run() devolve algo; o menu usa o próprio
-// resultado como prévia. Regras com `input` pedem um texto ao usuário e
+// resultado como prévia. Regras com `input` pedem um texto ao usuário (com
+// textos de ajuda em i18n "rule.<id>.ph" e "rule.<id>.hint") e
 // aparecem no menu quando available(ctx) é verdadeiro. `action` pede ao app
 // algo além de trocar a árvore (definir um nome, abrir uma área de trabalho).
 //
@@ -19,6 +20,7 @@ import { getAt, replaceAt, withArgs, fn, num, sym, same, isLeaf } from '../ast.j
 import { needsParens } from '../notation.js';
 import { parseInput } from '../input.js';
 import { toAscii } from '../serialize.js';
+import { msg } from '../i18n.js';
 import { evaluate, ratToNode } from './arith.js';
 import {
   terms, factors, unparen, signed, parentPath, lastIndex, parentOf,
@@ -68,7 +70,7 @@ function calculate(ctx) {
     if (same(node, n)) return null;
     return {
       tree: replaceAt(tree, p, node),
-      label: 'calculou',
+      label: msg('step.calc'),
       focus: node.id,
       hints: { merge: { to: node.id, from: [n.id] } },
     };
@@ -86,7 +88,7 @@ function calculate(ctx) {
   args[args.indexOf(parent.args[idx[0]])] = node;
   return {
     tree: replaceAt(tree, pp, rebuild(parent.op, args, parent)),
-    label: 'calculou',
+    label: msg('step.calc'),
     focus: node.id,
     hints: { merge: { to: node.id, from: items.map((x) => x.id) } },
   };
@@ -104,7 +106,7 @@ function distribute(ctx) {
     if (n.op === 'Negate' && sumOf(n.args[0])) {
       const s = sumOf(n.args[0]);
       const result = withArgs(s, s.args.map((t) => fn('Negate', t)));
-      return { tree: place(tree, p, result), label: 'distribuiu o sinal', focus: result.id };
+      return { tree: place(tree, p, result), label: msg('step.distSign'), focus: result.id };
     }
 
     // a(b + c) → ab + ac
@@ -124,7 +126,7 @@ function distribute(ctx) {
       return neg ? withArgs(t, [prod]) : prod;
     });
     const result = withArgs(s, newTerms);
-    return { tree: place(tree, p, result), label: 'distribuiu', focus: result.id, hints: { clones } };
+    return { tree: place(tree, p, result), label: msg('step.dist'), focus: result.id, hints: { clones } };
   });
 }
 
@@ -180,7 +182,7 @@ function factorOut(ctx) {
   }
   return {
     tree: t2,
-    label: 'pôs em evidência',
+    label: msg('step.factor'),
     focus: product.id,
     hints: { merge: { to: F.id, from: removed } },
   };
@@ -216,7 +218,7 @@ function cancelTerms(ctx) {
   const rest = S.args.filter((_, k) => k !== i && k !== j);
   return {
     tree: replaceAt(tree, sp, rebuild('Add', rest, S)),
-    label: 'cancelou termos opostos',
+    label: msg('step.cancelTerms'),
     hints: { strike: [S.args[i].id, S.args[j].id] },
   };
 }
@@ -266,7 +268,7 @@ function cancelFactors(ctx) {
   args[B.side] = strip(B);
   return {
     tree: replaceAt(tree, A.dp, withArgs(D, args)),
-    label: 'cancelou fatores iguais',
+    label: msg('step.cancelFactors'),
     hints: { strike: [x.id, y.id] },
   };
 }
@@ -291,7 +293,7 @@ function neutral(ctx) {
       gone = n.args.filter((a) => isNum(a, unit)).map((a) => a.id);
       node = rebuild(n.op, keep, n);
     } else return null;
-    return { tree: replaceAt(tree, p, node), label: 'removeu elemento neutro', hints: { strike: gone } };
+    return { tree: replaceAt(tree, p, node), label: msg('step.neutral'), hints: { strike: gone } };
   });
 }
 
@@ -313,7 +315,7 @@ function removeParens(ctx) {
       if (parent && needsParens(content, parent, lastIndex(p))) return null;
       t2 = replaceAt(tree, p, content);
     }
-    return { tree: t2, label: 'removeu parênteses', focus: content.id };
+    return { tree: t2, label: msg('step.parens'), focus: content.id };
   });
 }
 
@@ -329,7 +331,7 @@ function group(ctx) {
   const g = fn('Delimiter', fn(parent.op, ...idx.map((i) => parent.args[i])));
   const args = parent.args.filter((_, i) => !idx.includes(i) || i === idx[0]);
   args[args.indexOf(parent.args[idx[0]])] = g;
-  return { tree: replaceAt(tree, pp, withArgs(parent, args)), label: 'agrupou', focus: g.id };
+  return { tree: replaceAt(tree, pp, withArgs(parent, args)), label: msg('step.group'), focus: g.id };
 }
 
 // --------------------------------------------------------------- frações
@@ -363,7 +365,7 @@ function joinFractions(ctx) {
   }
   return {
     tree: t2,
-    label: 'juntou as frações',
+    label: msg('step.join'),
     focus: frac.id,
     hints: { merge: { to: den.id, from: parts.slice(1).map((x) => x.body.args[1].id) } },
   };
@@ -383,7 +385,7 @@ function splitFraction(ctx) {
       return neg ? withArgs(t, [f]) : f;
     });
     const result = withArgs(s, newTerms);
-    return { tree: place(tree, p, result), label: 'separou a fração', focus: result.id, hints: { clones } };
+    return { tree: place(tree, p, result), label: msg('step.split'), focus: result.id, hints: { clones } };
   });
 }
 
@@ -396,14 +398,14 @@ function signs(ctx) {
     const isNeg = (x) => unparen(x).op === 'Negate';
     if (n.op === 'Negate' && isNeg(n.args[0])) {
       const inner = unparen(n.args[0]).args[0];
-      return { tree: replaceAt(tree, p, inner), label: 'menos com menos dá mais', focus: inner.id };
+      return { tree: replaceAt(tree, p, inner), label: msg('step.doubleNeg'), focus: inner.id };
     }
     if (n.op !== 'Multiply' && n.op !== 'Divide') return null;
     const count = n.args.filter(isNeg).length;
     if (!count) return null;
     const stripped = withArgs(n, n.args.map((x) => (isNeg(x) ? unparen(x).args[0] : x)));
     const node = count % 2 ? fn('Negate', stripped) : stripped;
-    return { tree: place(tree, p, node), label: 'regra de sinais', focus: node.id };
+    return { tree: place(tree, p, node), label: msg('step.signs'), focus: node.id };
   });
 }
 
@@ -428,7 +430,7 @@ function powers(ctx) {
     args[args.indexOf(a)] = pw;
     return {
       tree: replaceAt(tree, pp, rebuild('Multiply', args, M)),
-      label: 'somou os expoentes',
+      label: msg('step.expAdd'),
       focus: pw.id,
       hints: { merge: { to: baseOf(a).id, from: [baseOf(b).id] } },
     };
@@ -455,7 +457,7 @@ function powers(ctx) {
       const pw = a.op === 'Power' ? withArgs(a, [a.args[0], e]) : fn('Power', a, e);
       return {
         tree: replaceAt(tree, p, pw),
-        label: 'subtraiu os expoentes',
+        label: msg('step.expSub'),
         focus: pw.id,
         hints: { merge: { to: baseOf(a).id, from: [baseOf(b).id] } },
       };
@@ -464,7 +466,7 @@ function powers(ctx) {
     if (n.op === 'Power' && unparen(n.args[0]).op === 'Power') {
       const inner = unparen(n.args[0]);
       const pw = withArgs(n, [inner.args[0], fn('Multiply', inner.args[1], n.args[1])]);
-      return { tree: replaceAt(tree, p, pw), label: 'potência de potência', focus: pw.id };
+      return { tree: replaceAt(tree, p, pw), label: msg('step.powPow'), focus: pw.id };
     }
     return null;
   });
@@ -530,7 +532,7 @@ function expandPower(ctx) {
       return fs.length === 1 ? fs[0] : fn('Multiply', ...fs);
     });
     const result = withArgs(s, terms);
-    const label = s.args.length === 2 ? 'binômio de Newton' : 'expansão multinomial';
+    const label = s.args.length === 2 ? msg('step.binomial') : msg('step.multinomial');
     return { tree: place(tree, p, result), label, focus: result.id, hints: { clones } };
   });
 }
@@ -547,7 +549,7 @@ function powerAsProduct(ctx) {
     const base = unparen(P.args[0]);
     const copies = [base, ...Array.from({ length: n - 1 }, () => cloneFrom(base, clones))];
     const prod = fn('Multiply', ...copies);
-    return { tree: replaceAt(tree, p, prod), label: 'escreveu a potência como produto', focus: prod.id, hints: { clones } };
+    return { tree: replaceAt(tree, p, prod), label: msg('step.asProduct'), focus: prod.id, hints: { clones } };
   });
 }
 
@@ -590,13 +592,13 @@ function bothSides(ctx) {
   const e2 = cloneFrom(e, clones);
   const sides = [BOTH_SIDES[op](tree.args[0], e), BOTH_SIDES[op](tree.args[1], e2)];
   const sym = { '*': '·', '/': '÷', '-': '−' }[op] ?? op;
-  return { tree: withArgs(tree, sides), label: `${sym} ${toAscii(e)} nos dois lados` };
+  return { tree: withArgs(tree, sides), label: msg('step.sides', { op: sym, e: toAscii(e) }) };
 }
 
 function swapSides(ctx) {
   const { tree } = ctx;
   if (tree.op !== 'Equal') return null;
-  return { tree: withArgs(tree, [tree.args[1], tree.args[0]]), label: 'trocou os lados' };
+  return { tree: withArgs(tree, [tree.args[1], tree.args[0]]), label: msg('step.swap') };
 }
 
 // ------------------------------------------------------------ substituir
@@ -615,7 +617,7 @@ function substitute(ctx) {
     focus ??= node.id;
     t2 = replaceAt(t2, p, node);
   }
-  return { tree: t2, label: `substituiu por ${toAscii(e)}`, focus };
+  return { tree: t2, label: msg('step.subst', { e: toAscii(e) }), focus };
 }
 
 // ------------------------------------------------------ somar e subtrair
@@ -629,7 +631,7 @@ function addSubtract(ctx) {
   const q = parseExpr(ctx.input);
   if (!q) return null;
   const pair = [q, fn('Negate', cloneFrom(q, {}))];
-  const label = `somou e subtraiu ${toAscii(q)}`;
+  const label = msg('step.addsub', { q: toAscii(q) });
 
   if (targets.length > 1) {
     const idx = siblingsOf(targets);
@@ -673,7 +675,7 @@ function nameIt(ctx) {
   const chip = { ...sym(name), named: true };
   return {
     tree: replaceAt(tree, targets[0], chip),
-    label: `chamou de ${name}`,
+    label: msg('step.name', { name }),
     focus: chip.id,
     action: { type: 'define', name, def: n, chipId: chip.id },
   };
@@ -685,52 +687,52 @@ function expandName(ctx) {
   const def = isNamed(n) && ctx.definitions?.[n.name];
   if (!def) return null;
   const node = cloneFrom(def, {});
-  return { tree: replaceAt(tree, focus, node), label: `expandiu ${n.name}`, focus: node.id };
+  return { tree: replaceAt(tree, focus, node), label: msg('step.expand', { name: n.name }), focus: node.id };
 }
 
 function openName(ctx) {
   const n = getAt(ctx.tree, ctx.focus);
   if (!isNamed(n) || !ctx.definitions?.[n.name]) return null;
-  return { label: `abrir ${n.name}`, action: { type: 'open', name: n.name } };
+  return { label: msg('step.open', { name: n.name }), action: { type: 'open', name: n.name } };
 }
 
 export const RULES = [
-  { id: 'calc', key: 'c', label: 'Calcular', run: calculate },
-  { id: 'dist', key: 'd', label: 'Distribuir', run: distribute },
-  { id: 'factor', key: 'e', label: 'Pôr em evidência', run: factorOut },
-  { id: 'cancel', key: 'x', label: 'Cancelar', run: cancel },
-  { id: 'neutral', key: 'n', label: 'Remover elemento neutro', run: neutral },
-  { id: 'signs', key: 'r', label: 'Regra de sinais', run: signs },
-  { id: 'parens', key: 'p', label: 'Remover parênteses', run: removeParens },
-  { id: 'group', key: 'g', label: 'Agrupar seleção', run: group },
-  { id: 'join', key: 'j', label: 'Juntar frações', run: joinFractions },
-  { id: 'split', key: 'f', label: 'Separar fração', run: splitFraction },
-  { id: 'powers', key: 'o', label: 'Propriedade de potências', run: powers },
-  { id: 'binomial', key: 'b', label: 'Expandir potência (binômio / multinomial)', run: expandPower },
-  { id: 'asproduct', key: 'm', label: 'Escrever potência como produto', run: powerAsProduct },
-  { id: 'expand', key: 'k', label: 'Expandir o nome', run: expandName },
-  { id: 'open', key: 'w', label: 'Abrir em área de trabalho', run: openName },
+  { id: 'calc', key: 'c', run: calculate },
+  { id: 'dist', key: 'd', run: distribute },
+  { id: 'factor', key: 'e', run: factorOut },
+  { id: 'cancel', key: 'x', run: cancel },
+  { id: 'neutral', key: 'n', run: neutral },
+  { id: 'signs', key: 'r', run: signs },
+  { id: 'parens', key: 'p', run: removeParens },
+  { id: 'group', key: 'g', run: group },
+  { id: 'join', key: 'j', run: joinFractions },
+  { id: 'split', key: 'f', run: splitFraction },
+  { id: 'powers', key: 'o', run: powers },
+  { id: 'binomial', key: 'b', run: expandPower },
+  { id: 'asproduct', key: 'm', run: powerAsProduct },
+  { id: 'expand', key: 'k', run: expandName },
+  { id: 'open', key: 'w', run: openName },
   {
-    id: 'addsub', key: 'q', label: 'Somar e subtrair…', run: addSubtract,
-    input: { placeholder: 'quantidade, ex.: 9   (b/2)^2', hint: 'a quantidade (ASCII ou LaTeX)' },
+    id: 'addsub', key: 'q', run: addSubtract,
+    input: true,
     available: (ctx) => ctx.targets.every((p) => getAt(ctx.tree, p).op !== 'Equal'),
   },
   {
-    id: 'subst', key: 's', label: 'Substituir por…', run: substitute,
-    input: { placeholder: 'nova expressão, ex.: 2a + 1   \\frac{1}{2}', hint: 'expressão (ASCII ou LaTeX)' },
+    id: 'subst', key: 's', run: substitute,
+    input: true,
     available: (ctx) => ctx.targets.length > 0,
   },
   {
-    id: 'name', key: 'a', label: 'Dar nome…', run: nameIt,
-    input: { placeholder: 'nome, ex.: K   A_1', hint: 'uma letra (com subscrito opcional) ainda não usada' },
+    id: 'name', key: 'a', run: nameIt,
+    input: true,
     available: (ctx) => ctx.targets.length === 1 && getAt(ctx.tree, ctx.targets[0]).op !== 'Equal',
   },
   {
-    id: 'sides', key: '=', label: 'Operar nos dois lados…', run: bothSides,
-    input: { placeholder: 'ex.: + 3   − x   · 2   / (x + 1)   ^ 2', hint: 'operador seguido de uma expressão' },
+    id: 'sides', key: '=', run: bothSides,
+    input: true,
     available: (ctx) => ctx.tree.op === 'Equal',
   },
-  { id: 'swap', key: 't', label: 'Trocar os lados', run: swapSides },
+  { id: 'swap', key: 't', run: swapSides },
 ];
 
 // Regras aplicáveis ao contexto, já com o resultado (prévia).
