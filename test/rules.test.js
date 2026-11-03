@@ -235,3 +235,16 @@ test('sugestão para completar quadrado', () => {
   assert.equal(sug('y = x^2 + x', [1]), '1/4');
   assert.equal(sug('x^2 + 6y = 7', [0]), null);
 });
+
+test('pôr em evidência: fator com sinal, entre parênteses e soma solta', () => {
+  // 1 − a − b + ab → 1 − a − b(1 − a) → (1 − a)(1 − b)
+  assert.equal(run('factor', '1 - a - b + a*b = 0', [0, 3, 1], [[0, 2], [0, 3]]), '1 - a + b(-1 + a) = 0', 'fator b');
+  const step1 = run('factor', '1 - a - b + a*b = 0', [0, 2], [[0, 2], [0, 3]]);
+  assert.equal(step1, '1 - a - b(1 - a) = 0', 'fator −b (foco no termo)');
+  assert.equal(run('factor', step1, [0, 2, 0, 1]), '(1 - a)(1 - b) = 0', 'fator 1 − a, termos soltos');
+  // fator digitado entre parênteses
+  assert.equal(run('factor', '(1 - a) - b(1 - a) = 0', [0, 0]), '(1 - a)(1 - b) = 0');
+  assert.equal(run('factor', 'x(a + b) + y(a + b) = 0', [0, 0, 1]), '(x + y)(a + b) = 0');
+  // −b em toda a soma
+  assert.equal(run('factor', '-b + a*b = 0', [0, 0]), '-b(1 - a) = 0');
+});
