@@ -457,7 +457,8 @@ function powers(ctx) {
     const M = getAt(tree, pp);
     const a = M.args[i];
     const b = M.args[j];
-    if (!same(baseOf(a), baseOf(b))) return null;
+    // a·a (sem expoentes) é a definição de potência: regra "aspower".
+    if (!same(baseOf(a), baseOf(b)) || (a.op !== 'Power' && b.op !== 'Power')) return null;
     const pw = a.op === 'Power'
       ? withArgs(a, [a.args[0], fn('Add', a.args[1], expOf(b))])
       : fn('Power', a, fn('Add', num(1), expOf(b)));
@@ -478,6 +479,15 @@ function powers(ctx) {
 
   return atFocusOrParent(ctx, (p) => {
     const n = getAt(tree, p);
+    // foco no produto: primeiro par de fatores com a mesma base
+    if (n.op === 'Multiply') {
+      for (let i = 0; i < n.args.length; i++) {
+        for (let j = i + 1; j < n.args.length; j++) {
+          const r = sameBaseProduct(p, i, j);
+          if (r) return r;
+        }
+      }
+    }
     // foco num fator: procura outro fator com a mesma base
     if (parentOf(tree, p)?.op === 'Multiply' && p.length === focus.length) {
       const M = parentOf(tree, p);
@@ -505,6 +515,106 @@ function powers(ctx) {
     }
     return null;
   });
+}
+
+// ------------------------------------------------ escrever como potência
+
+// a·a·b·a → a³·b: fatores iguais (sem expoente) viram uma potência, pela
+// definição. O primeiro fator fica no lugar; os outros "voam" até ele.
+function asPower(ctx) {
+  const { tree, targets, focus } = ctx;
+  const group = (pp, idx) => {
+    const M = getAt(tree, pp);
+    if (M.op !== 'Multiply' || idx.length < 2) return null;
+    const first = M.args[idx[0]];
+    if (first.op === 'Power' || idx.some((i) => M.args[i].op === 'Power' || !same(M.args[i], first))) return null;
+    const pw = fn('Power', first, num(idx.length));
+    const args = M.args.filter((_, k) => !idx.includes(k) || k === idx[0]);
+    args[args.indexOf(first)] = pw;
+    return {
+      tree: replaceAt(tree, pp, rebuild('Multiply', args, M)),
+      label: msg('step.asPower'),
+      focus: pw.id,
+      hints: { merge: { to: first.id, from: idx.slice(1).map((i) => M.args[i].id) } },
+    };
+  };
+  // Todas as ocorrências (sem expoente) de um fator no produto.
+  const copiesOf = (M, x) => M.args.map((c, k) => (c.op !== 'Power' && same(c, x) ? k : -1)).filter((k) => k >= 0);
+
+  const sib = siblingsOf(targets);
+  if (sib) return group(parentPath(targets[0]), sib);
+  const n = getAt(tree, focus);
+  if (n.op === 'Multiply') {
+    for (const c of n.args) {
+      const idx = copiesOf(n, c);
+      if (idx.length >= 2) return group(focus, idx);
+    }
+    return null;
+  }
+  const parent = parentOf(tree, focus);
+  if (parent?.op !== 'Multiply') return null;
+  return group(parentPath(focus), copiesOf(parent, n));
+}
+
+// ------------------------------------------- juntar termos semelhantes
+
+// Coeficiente numérico e "parte literal" de um termo: −3ab → (−3, ab).
+function monomial(t) {
+  const { neg, body } = signed(t);
+  let coef = rat1();
+  let rest = body;
+  if (body.op === 'Multiply' && evaluate(body.args[0])) {
+    coef = evaluate(body.args[0]);
+    rest = rebuild('Multiply', body.args.slice(1), body);
+  } else if (evaluate(body)) return null; // constante: use "calcular"
+  return { coef: neg ? { n: -coef.n, d: coef.d } : coef, rest };
+}
+const rat1 = () => ({ n: 1n, d: 1n });
+
+// ab + ab → 2ab; 3x − x → 2x. Só junta termos escritos igualmente (ba e ab
+// precisam ser reordenados antes: a comutatividade fica visível).
+function likeTerms(ctx) {
+  const { tree, targets, focus } = ctx;
+  let sp, idx;
+  const sib = siblingsOf(targets);
+  if (sib && getAt(tree, parentPath(targets[0])).op === 'Add') {
+    sp = parentPath(targets[0]);
+    idx = sib;
+  } else {
+    let tp = focus;
+    if (parentOf(tree, tp)?.op === 'Multiply') tp = parentPath(tp);
+    if (parentOf(tree, tp)?.op === 'Negate') tp = parentPath(tp);
+    if (parentOf(tree, tp)?.op !== 'Add') return null;
+    sp = parentPath(tp);
+    const S = getAt(tree, sp);
+    const me = monomial(S.args[lastIndex(tp)]);
+    if (!me) return null;
+    idx = S.args.map((t, k) => (same(monomial(t)?.rest ?? num(0), me.rest) && monomial(t) ? k : -1)).filter((k) => k >= 0);
+  }
+  const S = getAt(tree, sp);
+  if (idx.length < 2) return null;
+  const ms = idx.map((i) => monomial(S.args[i]));
+  if (ms.some((m) => !m || !same(m.rest, ms[0].rest))) return null;
+
+  let sum = { n: 0n, d: 1n };
+  for (const { coef } of ms) sum = { n: sum.n * coef.d + coef.n * sum.d, d: sum.d * coef.d };
+  const rest = ms[0].rest;
+  let term;
+  if (sum.n === 0n) term = num(0);
+  else {
+    const c = ratToNode({ n: sum.n < 0n ? -sum.n : sum.n, d: sum.d });
+    const isOne = c.op === 'Number' && c.value === '1';
+    const body = isOne ? rest : fn('Multiply', c, ...(rest.op === 'Multiply' ? rest.args : [rest]));
+    term = sum.n < 0n ? fn('Negate', body) : body;
+  }
+  const args = S.args.filter((_, k) => !idx.includes(k) || k === idx[0]);
+  args[args.indexOf(S.args[idx[0]])] = term;
+  return {
+    tree: replaceAt(tree, sp, rebuild('Add', args, S)),
+    label: msg('step.like'),
+    focus: term.id,
+    hints: { merge: { to: term.id, from: idx.map((i) => S.args[i].id) } },
+  };
 }
 
 // --------------------------------------------- expansão de potências
@@ -746,6 +856,8 @@ export const RULES = [
   { id: 'powers', key: 'o', run: powers },
   { id: 'binomial', key: 'b', run: expandPower },
   { id: 'asproduct', key: 'm', run: powerAsProduct },
+  { id: 'aspower', key: 'u', run: asPower },
+  { id: 'like', key: 'l', run: likeTerms },
   { id: 'expand', key: 'k', run: expandName },
   { id: 'open', key: 'w', run: openName },
   {

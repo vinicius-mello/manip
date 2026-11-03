@@ -77,7 +77,8 @@ test('agrupar, frações e potências', () => {
   assert.equal(run('join', 'x/2 + y/3 = 1', [0]), null);
   assert.equal(run('split', '(x + y)/2 = 1', [0]), 'x/2 + y/2 = 1');
   assert.equal(run('powers', 'x^2 x^3 = 1', [0, 0]), 'x^(2 + 3) = 1');
-  assert.equal(run('powers', 'x x = 1', [0, 0]), 'x^(1 + 1) = 1');
+  assert.equal(run('powers', 'x x = 1', [0, 0]), null, 'x·x é "escrever como potência"');
+  assert.equal(run('powers', 'x^2 x = 1', [0]), 'x^(2 + 1) = 1', 'foco no produto');
   assert.equal(run('powers', 'x^5/x^2 = 1', [0]), 'x^(5 - 2) = 1');
   assert.equal(run('powers', '(x^2)^3 = 1', [0]), 'x^(2*3) = 1');
 });
@@ -190,4 +191,25 @@ test('pôr entre parênteses', () => {
   assert.equal(run('wrap', 'a + b = 0', [0, 0], [[0, 0], [0, 1]]), '(a + b) = 0', 'soma inteira');
   assert.equal(run('wrap', 'a + b + c = 0', [0, 0], [[0, 0], [0, 2]]), '(a) + b + (c) = 0', 'não vizinhos');
   assert.equal(run('wrap', 'x = 2', []), null, 'não na equação inteira');
+});
+
+test('escrever como potência', () => {
+  assert.equal(run('aspower', 'aa + bb = 0', [0, 0]), 'a^2 + bb = 0', 'foco no produto');
+  assert.equal(run('aspower', 'aa + bb = 0', [0, 1, 0]), 'aa + b^2 = 0', 'foco num fator');
+  assert.equal(run('aspower', 'a a b a = 0', [0]), 'a^3b = 0');
+  assert.equal(run('aspower', 'a a a = 0', [0, 0], [[0, 0], [0, 1]]), 'a^2a = 0', 'só os selecionados');
+  assert.equal(run('aspower', 'ab = 0', [0]), null);
+  assert.equal(run('aspower', 'x^2 x = 0', [0]), null, 'com expoente: propriedade de potências');
+});
+
+test('juntar termos semelhantes', () => {
+  assert.equal(run('like', 'a^2 + ab + ab + b^2 = 0', [0, 1]), 'a^2 + 2ab + b^2 = 0');
+  assert.equal(run('like', '3x - x = 0', [0, 0]), '2x = 0');
+  assert.equal(run('like', 'x - x + y = 0', [0, 0]), '0 + y = 0');
+  assert.equal(run('like', '2x - 5x = 0', [0, 0]), '-3x = 0');
+  assert.equal(run('like', 'x/2 + x/2 = 0', [0, 0]), '2(x/2) = 0', 'termos iguais, mesmo sendo frações');
+  assert.equal(run('like', '(1/2)x + x = 0', [0, 0]), '(3/2)x = 0');
+  assert.equal(run('like', 'ab + ba = 0', [0, 0]), null, 'ordem diferente: reordenar antes');
+  assert.equal(run('like', '2 + 3 = x', [0, 0]), null, 'constantes: calcular');
+  assert.equal(run('like', 'a + b + a = 0', [0, 0], [[0, 0], [0, 2]]), '2a + b = 0');
 });
