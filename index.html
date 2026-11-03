@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manip</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,500;1,400&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Manip</h1>
+    <label class="entry">
+      <span class="sr">Equação</span>
+      <input id="input" type="text" spellcheck="false" autocomplete="off"
+             placeholder="Digite uma equação em ASCII ou LaTeX, ex.: 2x + 3 = 7">
+    </label>
+    <span id="input-error" class="error" role="alert"></span>
+    <label class="speed">
+      Animação
+      <select id="speed">
+        <option value="480">normal</option>
+        <option value="1000">aula (lenta)</option>
+        <option value="0">desligada</option>
+      </select>
+    </label>
+    <details class="export">
+      <summary>Exportar</summary>
+      <div class="export-menu">
+        <button type="button" data-export="latex-steps">Copiar LaTeX dos passos</button>
+        <button type="button" data-export="mathjson">Copiar MathJSON</button>
+        <button type="button" data-export="save">Salvar arquivo .json</button>
+        <button type="button" data-export="open">Abrir arquivo .json</button>
+      </div>
+    </details>
+    <input id="file" type="file" accept=".json,application/json" hidden>
+  </header>
+
+  <main class="layout">
+    <div class="work">
+      <nav id="tabs" class="tabs" aria-label="Áreas de trabalho"></nav>
+      <section id="stage" tabindex="0" aria-label="Equação: use as setas para navegar"></section>
+    </div>
+    <aside class="side">
+      <section id="names-panel" hidden>
+        <h2>Nomes</h2>
+        <ul id="names"></ul>
+      </section>
+      <h2>Passos</h2>
+      <ol id="history"></ol>
+    </aside>
+  </main>
+
+  <footer class="keys">
+    <span><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> navegar</span>
+    <span><kbd>Ctrl</kbd>+<kbd>←</kbd><kbd>→</kbd> mover / passar para o outro lado</span>
+    <span><kbd>Ctrl</kbd>+<kbd>↑</kbd><kbd>↓</kbd> sair / entrar no grupo</span>
+    <span><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> selecionar vizinhos</span>
+    <span><kbd>Espaço</kbd> selecionar</span>
+    <span><kbd>Enter</kbd> operações</span>
+    <span><kbd>S</kbd> substituir</span>
+    <span><kbd>N</kbd> dar nome</span>
+    <span><kbd>Tab</kbd> áreas de trabalho</span>
+    <span><kbd>C</kbd> colorir</span>
+    <span><kbd>E</kbd> editar</span>
+    <span><kbd>L</kbd> copiar LaTeX</span>
+    <span><kbd>P</kbd> apresentação</span>
+    <span><kbd>Ctrl</kbd>+<kbd>Z</kbd> desfazer</span>
+  </footer>
+
+  <div id="menu" class="menu" tabindex="-1" role="menu" hidden></div>
+  <div id="toast" role="status"></div>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

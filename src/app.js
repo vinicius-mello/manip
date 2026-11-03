@@ -1,0 +1,706 @@
+// Estado da aplicação, mapa de teclas e ligação entre os módulos.
+//
+// O documento é uma lista de áreas de trabalho. A primeira é a equação
+// principal; cada nome dado a uma subexpressão (K := ...) ganha a sua, com a
+// equação "K = definição" para ser manipulada à parte. A definição atual de
+// um nome é o outro lado dessa equação.
+
+import { getAt, replaceAt, findPath, strip, cloneFresh, sym, fn } from './ast.js';
+import { parseInput, ParseError } from './input.js';
+import { toAscii, toLatex } from './serialize.js';
+import { toMathJson } from './mathjson.js';
+import { render, layoutPowers } from './render.js';
+import { capture, play, finishAll } from './animate.js';
+import { left, right, up, down } from './cursor.js';
+import { shiftSideways, shiftOut, shiftIn } from './moves.js';
+import { History } from './history.js';
+import { applicable } from './rules/index.js';
+
+const COLORS = 6;
+const STORAGE_KEY = 'manip.state.v3';
+const EXAMPLE = '2x + 3 = 7';
+
+const $ = (s) => document.querySelector(s);
+const input = $('#input');
+const inputError = $('#input-error');
+const stage = $('#stage');
+const historyList = $('#history');
+const tabsEl = $('#tabs');
+const namesPanel = $('#names-panel');
+const namesList = $('#names');
+const toastEl = $('#toast');
+const speedSelect = $('#speed');
+const menuEl = $('#menu');
+const fileInput = $('#file');
+
+let workspaces = [];
+let active = 0;
+let selected = new Set();
+let anchorId = null; // início da seleção feita com Shift+setas
+let presenting = false;
+
+const ws = () => workspaces[active];
+const history = () => ws().history;
+const state = () => history().current;
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const duration = () => (reducedMotion.matches ? 0 : Number(speedSelect.value));
+
+function focusPath() {
+  const { tree, focusId } = state();
+  return findPath(tree, focusId) ?? [];
+}
+
+// ---------- áreas de trabalho e nomes ----------
+
+function newWorkspace(id, title, tree, label, extra = {}) {
+  const h = new History();
+  h.push({ tree, focusId: (tree.args?.[0] ?? tree).id, label });
+  return { id, title, history: h, ...extra };
+}
+
+const nameSpaces = () => workspaces.slice(1);
+const isSymbolNamed = (n, name) => n.op === 'Symbol' && n.name === name;
+
+// Definição atual de cada nome: o lado da equação que não é o próprio nome.
+function definitions() {
+  const defs = {};
+  for (const w of nameSpaces()) {
+    const t = w.history.current.tree;
+    if (t.op === 'Equal' && isSymbolNamed(t.args[0], w.id)) defs[w.id] = t.args[1];
+    else if (t.op === 'Equal' && isSymbolNamed(t.args[1], w.id)) defs[w.id] = t.args[0];
+    else defs[w.id] = w.def;
+  }
+  return defs;
+}
+
+const chip = (name, color) => ({ ...sym(name), named: true, color });
+
+function define({ name, def, chipId }, tree) {
+  const color = nameSpaces().length % COLORS;
+  const path = findPath(tree, chipId);
+  const tree2 = replaceAt(tree, path, { ...getAt(tree, path), color });
+  const eq = fn('Equal', chip(name, color), cloneFresh(def));
+  workspaces.push(newWorkspace(name, name, eq, 'definição', { def: cloneFresh(def), color }));
+  return tree2;
+}
+
+function switchTo(i) {
+  if (i === active || !workspaces[i]) return;
+  closeMenu();
+  active = i;
+  selected.clear();
+  input.value = toAscii(state().tree);
+  refresh(false);
+}
+
+// ---------- renderização ----------
+
+// Reduz a fonte quando a fórmula não cabe no espaço disponível.
+function fit(root, width, height = Infinity) {
+  root.style.fontSize = '';
+  layoutPowers(root);
+  const scale = Math.min(width / root.scrollWidth, height / root.scrollHeight);
+  if (scale >= 1) return;
+  const size = parseFloat(getComputedStyle(root).fontSize);
+  root.style.fontSize = `${Math.max(10, size * scale)}px`;
+  layoutPowers(root);
+}
+
+const stageWidth = () => {
+  const cs = getComputedStyle(stage);
+  return stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+};
+
+// No modo apresentação a fórmula divide a altura com o quadro de passos.
+const stageHeight = () => {
+  if (!presenting) return Infinity;
+  const cs = getComputedStyle(stage);
+  const board = stage.querySelector('.board');
+  const used = board ? board.offsetHeight + parseFloat(cs.rowGap || 0) : 0;
+  return stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - used;
+};
+
+function staticFormula(tree, cls = 'formula mini') {
+  const f = document.createElement('div');
+  f.className = cls;
+  f.append(render(tree));
+  f.querySelectorAll('[data-key]').forEach((e) => e.removeAttribute('data-key'));
+  return f;
+}
+
+// Modo apresentação: os passos anteriores ficam empilhados acima, como num quadro.
+function drawBoard() {
+  let board = stage.querySelector('.board');
+  if (!presenting) {
+    board?.remove();
+    return;
+  }
+  if (!board) {
+    board = document.createElement('div');
+    board.className = 'board';
+    stage.prepend(board);
+  }
+  const h = history();
+  const prev = h.steps.slice(Math.max(0, h.index - 2), h.index);
+  board.replaceChildren(...prev.map((s, i) => {
+    const f = staticFormula(s.tree, 'formula board-step');
+    f.style.opacity = String(0.3 + (0.4 * (i + 1)) / prev.length);
+    return f;
+  }));
+  board.querySelectorAll('.formula').forEach((f) => fit(f, stageWidth(), stage.clientHeight * 0.2));
+}
+
+function drawFormula({ animate = false, arcKey = null, hints } = {}) {
+  finishAll(stage);
+  const oldRoot = stage.querySelector('.formula.main');
+  const oldRects = oldRoot && animate ? capture(oldRoot) : null;
+
+  const root = document.createElement('div');
+  root.className = 'formula main';
+  root.append(render(state().tree));
+  if (oldRoot) oldRoot.classList.add('leaving');
+  drawBoard();
+  stage.append(root);
+  fit(root, stageWidth(), stageHeight());
+  applyMarks();
+  if (oldRects) play({ stage, oldRoot, oldRects, newRoot: root, arcKey, hints, duration: duration() });
+  oldRoot?.remove();
+}
+
+// Foco e seleção são só classes: mudar o foco não reconstrói o DOM.
+function applyMarks() {
+  const root = stage.querySelector('.formula.main:not(.leaving)');
+  root.querySelectorAll('.focus, .selected').forEach((e) => e.classList.remove('focus', 'selected'));
+  const { focusId } = state();
+  root.querySelector(`[data-key="${focusId}"]`)?.classList.add('focus');
+  for (const id of selected) root.querySelector(`[data-key="${id}"]`)?.classList.add('selected');
+}
+
+function drawHistory() {
+  const h = history();
+  historyList.replaceChildren(...h.steps.map((step, i) => {
+    const li = document.createElement('li');
+    li.className = i === h.index ? 'current' : i > h.index ? 'future' : '';
+    const label = document.createElement('span');
+    label.className = 'step-label';
+    label.textContent = step.label;
+    li.append(label, staticFormula(step.tree));
+    li.addEventListener('click', () => {
+      h.goto(i);
+      selected.clear();
+      refresh(true);
+      stage.focus();
+    });
+    return li;
+  }));
+  historyList.querySelectorAll('.formula.mini').forEach((f) => fit(f, f.parentElement.clientWidth - 40));
+  historyList.querySelector('.current')?.scrollIntoView({ block: 'nearest' });
+}
+
+function drawTabs() {
+  tabsEl.hidden = workspaces.length < 2;
+  tabsEl.replaceChildren(...workspaces.map((w, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tab' + (i === active ? ' active' : '');
+    if (w.color !== undefined) b.classList.add('c' + w.color);
+    b.textContent = w.title;
+    b.addEventListener('click', () => { switchTo(i); stage.focus(); });
+    return b;
+  }));
+}
+
+function drawNames() {
+  const defs = definitions();
+  namesPanel.hidden = !nameSpaces().length;
+  namesList.replaceChildren(...nameSpaces().map((w) => {
+    const li = document.createElement('li');
+    li.append(staticFormula(fn('Equal', chip(w.id, w.color), defs[w.id])));
+    li.title = `Abrir ${w.id}`;
+    li.addEventListener('click', () => { switchTo(workspaces.indexOf(w)); stage.focus(); });
+    return li;
+  }));
+  namesList.querySelectorAll('.formula.mini').forEach((f) => fit(f, f.parentElement.clientWidth - 40));
+}
+
+function refresh(animate = false, arcKey = null, hints = undefined) {
+  drawFormula({ animate, arcKey, hints });
+  drawHistory();
+  drawTabs();
+  drawNames();
+  save();
+}
+
+let toastTimer;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+function bump() {
+  stage.classList.remove('bump');
+  void stage.offsetWidth;
+  stage.classList.add('bump');
+}
+
+// ---------- ações ----------
+
+// Se o nó em foco sumiu, o foco vai para o nó que ocupa o caminho antigo
+// (ou o ancestral mais próximo que ainda existe).
+function keepFocus(tree, focusId) {
+  if (findPath(tree, focusId)) return focusId;
+  let p = focusPath();
+  for (;;) {
+    try {
+      const n = getAt(tree, p);
+      if (n) return n.id;
+    } catch { /* caminho não existe mais */ }
+    p = p.slice(0, -1);
+  }
+}
+
+function commit(tree, label, focusId = state().focusId, arcKey = null, hints = undefined) {
+  history().push({ tree, focusId: keepFocus(tree, focusId), label });
+  refresh(true, arcKey, hints);
+}
+
+function setFocus(path) {
+  state().focusId = getAt(state().tree, path).id;
+  applyMarks();
+}
+
+function move(f, ...args) {
+  const r = f(state().tree, focusPath(), ...args);
+  if (!r) return bump();
+  selected.clear();
+  commit(r.tree, r.label, r.focus ?? state().focusId, r.arc);
+}
+
+// Shift+←/→: seleção contígua entre irmãos, da âncora até o foco (como em
+// um editor de texto). Voltar em direção à âncora encolhe a seleção.
+function extendSelection(dir) {
+  const path = focusPath();
+  if (!path.length) return bump();
+  const pp = path.slice(0, -1);
+  const parent = getAt(state().tree, pp);
+  const j = path[path.length - 1] + dir;
+  if (j < 0 || j >= parent.args.length) return bump();
+  let a = parent.args.findIndex((c) => c.id === anchorId);
+  if (a < 0 || !selected.has(anchorId)) {
+    anchorId = state().focusId;
+    a = path[path.length - 1];
+  }
+  const [lo, hi] = a < j ? [a, j] : [j, a];
+  selected = new Set(parent.args.slice(lo, hi + 1).map((c) => c.id));
+  state().focusId = parent.args[j].id;
+  applyMarks();
+}
+
+function toggleSelection() {
+  const id = state().focusId;
+  if (selected.has(id)) selected.delete(id);
+  else selected.add(id);
+  applyMarks();
+}
+
+function cycleColor() {
+  const path = focusPath();
+  const n = getAt(state().tree, path);
+  const next = n.color === undefined ? 0 : n.color + 1;
+  const node = { ...n };
+  if (next >= COLORS) delete node.color;
+  else node.color = next;
+  const step = { tree: replaceAt(state().tree, path, node), focusId: n.id, label: 'mudou a cor', colorOf: n.id };
+  // Apertar C várias vezes no mesmo nó gera um passo só.
+  if (state().colorOf === n.id && history().index > 0) history().replaceCurrent(step);
+  else history().push(step);
+  refresh(true);
+}
+
+async function copyText(text, what) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`${what} copiado`);
+  } catch {
+    toast(text);
+  }
+}
+
+function togglePresenting() {
+  presenting = !presenting;
+  document.body.classList.toggle('presenting', presenting);
+  closeMenu();
+  refresh(false);
+  if (presenting) toast('Apresentação: P ou Esc para sair · PgUp/PgDn percorrem os passos');
+}
+
+// Texto digitado no campo principal: na área principal começa um problema
+// novo; numa área de nome, vira um novo passo daquela equação.
+function load(text) {
+  let tree;
+  try {
+    tree = parseInput(text);
+  } catch (err) {
+    if (!(err instanceof ParseError)) throw err;
+    inputError.textContent = err.message;
+    input.setSelectionRange(err.pos, Math.min(err.pos + 1, text.length));
+    return false;
+  }
+  inputError.textContent = '';
+  selected.clear();
+  if (active === 0) {
+    workspaces = [newWorkspace('main', 'Principal', tree, 'entrada')];
+  } else {
+    history().push({ tree, focusId: (tree.args?.[0] ?? tree).id, label: 'entrada' });
+  }
+  refresh(false);
+  return true;
+}
+
+// ---------- menu de operações ----------
+
+let menu = null; // { items, index, input: bool, inputText }
+
+function ruleContext(text) {
+  const { tree } = state();
+  const focus = focusPath();
+  const targets = [...selected]
+    .map((id) => findPath(tree, id))
+    .filter(Boolean)
+    .sort((a, b) => (a.join() < b.join() ? -1 : 1));
+  return { tree, focus, targets: targets.length ? targets : [focus], input: text, definitions: definitions() };
+}
+
+// ruleId abre o menu direto na entrada de texto daquela regra (S, N).
+function openMenu(ruleId) {
+  const items = applicable(ruleContext());
+  const direct = ruleId ? items.findIndex((x) => x.rule.id === ruleId) : 0;
+  if (direct < 0) return bump();
+  if (!items.length) {
+    toast('Nenhuma operação se aplica aqui');
+    return;
+  }
+  menu = { items, index: direct, input: !!ruleId, inputText: '' };
+  drawMenu();
+}
+
+function closeMenu() {
+  if (!menu) return;
+  menu = null;
+  menuEl.hidden = true;
+  stage.focus();
+}
+
+function hintEl(text) {
+  return Object.assign(document.createElement('span'), { className: 'hint', textContent: text });
+}
+
+function drawMenu() {
+  const { items, index } = menu;
+  const list = document.createElement('ul');
+  items.forEach(({ rule }, i) => {
+    const li = document.createElement('li');
+    li.className = i === index ? 'active' : '';
+    const k = document.createElement('kbd');
+    k.textContent = rule.key;
+    li.append(k, rule.label);
+    li.addEventListener('mousemove', () => {
+      if (menu.index !== i && !menu.input) { menu.index = i; drawMenu(); }
+    });
+    li.addEventListener('mousedown', (ev) => { ev.preventDefault(); choose(i); });
+    list.append(li);
+  });
+
+  const box = document.createElement('div');
+  box.className = 'menu-preview';
+  const { rule, result } = items[index];
+  menuEl.replaceChildren(list, box);
+  menuEl.hidden = false;
+
+  if (rule.input && menu.input) {
+    const inp = document.createElement('input');
+    inp.className = 'menu-input';
+    inp.placeholder = rule.input.placeholder;
+    inp.spellcheck = false;
+    inp.value = menu.inputText;
+    inp.addEventListener('input', () => {
+      menu.inputText = inp.value;
+      updateInputPreview(box, inp.value);
+    });
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        const r = rule.run(ruleContext(inp.value));
+        if (r) { closeMenu(); applyResult(r); }
+        else bump();
+      } else if (ev.key === 'Escape') {
+        menu.input = false;
+        drawMenu();
+        menuEl.focus();
+      } else return;
+      ev.preventDefault();
+      ev.stopPropagation();
+    });
+    box.append(inp);
+    updateInputPreview(box, inp.value);
+    positionMenu();
+    inp.focus();
+    return;
+  }
+
+  if (result?.tree) box.append(staticFormula(result.tree));
+  else box.append(hintEl(rule.input ? 'Enter para digitar' : result?.label ?? ''));
+  box.querySelectorAll('.formula.mini').forEach((f) => fit(f, 320));
+  positionMenu();
+}
+
+function updateInputPreview(box, text) {
+  box.querySelector('.formula, .hint')?.remove();
+  const { rule } = menu.items[menu.index];
+  const r = text.trim() ? rule.run(ruleContext(text)) : null;
+  box.append(r?.tree ? staticFormula(r.tree) : hintEl(rule.input.hint));
+  box.querySelectorAll('.formula.mini').forEach((f) => fit(f, 320));
+}
+
+// O menu aparece logo abaixo do nó em foco, sem sair da tela.
+function positionMenu() {
+  const root = stage.querySelector('.formula.main:not(.leaving)');
+  const target = root.querySelector('.focus') ?? root;
+  const r = target.getBoundingClientRect();
+  const m = menuEl.getBoundingClientRect();
+  const left = Math.min(Math.max(8, r.left + r.width / 2 - m.width / 2), innerWidth - m.width - 8);
+  let top = r.bottom + 12;
+  if (top + m.height > innerHeight - 8) top = Math.max(8, r.top - m.height - 12);
+  menuEl.style.left = `${left}px`;
+  menuEl.style.top = `${top}px`;
+}
+
+function choose(i) {
+  const { rule, result } = menu.items[i];
+  if (rule.input) {
+    menu.index = i;
+    menu.input = true;
+    drawMenu();
+    return;
+  }
+  closeMenu();
+  applyResult(result);
+}
+
+function applyResult(r) {
+  if (r.action?.type === 'open') {
+    switchTo(workspaces.findIndex((w) => w.id === r.action.name));
+    return;
+  }
+  let tree = r.tree;
+  if (r.action?.type === 'define') tree = define(r.action, tree);
+  selected.clear();
+  commit(tree, r.label, r.focus ?? state().focusId, null, r.hints);
+}
+
+function menuKey(ev) {
+  const k = ev.key;
+  if (k === 'Escape') closeMenu();
+  else if (k === 'ArrowDown') { menu.index = (menu.index + 1) % menu.items.length; drawMenu(); }
+  else if (k === 'ArrowUp') { menu.index = (menu.index - 1 + menu.items.length) % menu.items.length; drawMenu(); }
+  else if (k === 'Enter') choose(menu.index);
+  else {
+    const i = menu.items.findIndex(({ rule }) => rule.key === k.toLowerCase());
+    if (i < 0) return;
+    choose(i);
+  }
+  ev.preventDefault();
+}
+
+menuEl.addEventListener('keydown', (ev) => {
+  if (menu && ev.target === menuEl) menuKey(ev);
+});
+
+// ---------- exportação e persistência ----------
+
+function serialize() {
+  return {
+    format: 'manip',
+    version: 3,
+    active,
+    workspaces: workspaces.map((w) => ({
+      id: w.id,
+      title: w.title,
+      color: w.color,
+      def: w.def && strip(w.def),
+      index: w.history.index,
+      steps: w.history.steps.map((s) => ({ tree: strip(s.tree), label: s.label })),
+    })),
+  };
+}
+
+function deserialize(data) {
+  if (data?.format !== 'manip' || !data.workspaces?.length) throw new Error('arquivo inválido');
+  workspaces = data.workspaces.map((w) => {
+    const h = new History();
+    for (const s of w.steps) {
+      const tree = cloneFresh(s.tree);
+      h.push({ tree, focusId: (tree.args?.[0] ?? tree).id, label: s.label });
+    }
+    h.goto(w.index);
+    return { id: w.id, title: w.title, color: w.color, def: w.def && cloneFresh(w.def), history: h };
+  });
+  active = Math.min(data.active ?? 0, workspaces.length - 1);
+  selected.clear();
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serialize()));
+  } catch { /* armazenamento indisponível: segue sem salvar */ }
+}
+
+function restore() {
+  try {
+    deserialize(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Passos em um ambiente aligned, sem repetir linhas iguais (ex.: só cor).
+function stepsLatex() {
+  const lines = [];
+  for (const s of history().steps.slice(0, history().index + 1)) {
+    const t = s.tree;
+    const line = t.op === 'Equal' ? `${toLatex(t.args[0])} &= ${toLatex(t.args[1])}` : `&${toLatex(t)}`;
+    if (lines[lines.length - 1] !== line) lines.push(line);
+  }
+  return `\\begin{aligned}\n${lines.join(' \\\\\n')}\n\\end{aligned}`;
+}
+
+const EXPORTS = {
+  'latex-steps': () => copyText(stepsLatex(), 'LaTeX dos passos'),
+  mathjson: () => copyText(JSON.stringify(toMathJson(state().tree)), 'MathJSON'),
+  save: () => {
+    const blob = new Blob([JSON.stringify(serialize(), null, 2)], { type: 'application/json' });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: 'manip.json',
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+  open: () => fileInput.click(),
+};
+
+document.querySelectorAll('[data-export]').forEach((b) => b.addEventListener('click', () => {
+  b.closest('details').open = false;
+  EXPORTS[b.dataset.export]();
+}));
+
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files[0];
+  fileInput.value = '';
+  if (!file) return;
+  try {
+    deserialize(JSON.parse(await file.text()));
+    input.value = toAscii(state().tree);
+    refresh(false);
+    toast(`Aberto: ${file.name}`);
+  } catch (err) {
+    toast(`Não foi possível abrir: ${err.message}`);
+  }
+  stage.focus();
+});
+
+// ---------- teclado ----------
+
+stage.addEventListener('keydown', (ev) => {
+  if (menu) {
+    menuKey(ev);
+    return;
+  }
+  const k = ev.key;
+  const ctrl = ev.ctrlKey || ev.metaKey;
+  const nav = { ArrowLeft: left, ArrowRight: right, ArrowUp: up, ArrowDown: down };
+  // Ctrl (ou Alt, já que no macOS Ctrl+setas troca de mesa) + setas movem o termo.
+  const moves = {
+    ArrowLeft: [shiftSideways, -1], ArrowRight: [shiftSideways, +1],
+    ArrowUp: [shiftOut], ArrowDown: [shiftIn],
+  };
+
+  if ((ctrl || ev.altKey) && moves[k]) move(...moves[k]);
+  else if (ctrl && (k === 'z' || k === 'Z')) {
+    ev.shiftKey ? history().redo() : history().undo();
+    selected.clear();
+    refresh(true);
+  } else if (ctrl && k === 'y') {
+    history().redo();
+    refresh(true);
+  } else if (ctrl) {
+    return;
+  } else if (k === 'Tab') {
+    if (workspaces.length < 2) return;
+    switchTo((active + (ev.shiftKey ? -1 : 1) + workspaces.length) % workspaces.length);
+  } else if (presenting && (k === 'PageUp' || k === 'PageDown')) {
+    k === 'PageUp' ? history().undo() : history().redo();
+    selected.clear();
+    refresh(true);
+  } else if (ev.shiftKey && k === 'ArrowLeft') extendSelection(-1);
+  else if (ev.shiftKey && k === 'ArrowRight') extendSelection(+1);
+  else if (nav[k] && !ev.shiftKey) {
+    anchorId = null;
+    setFocus(nav[k](state().tree, focusPath()));
+  }
+  else if (k === ' ') toggleSelection();
+  else if (k === 'Escape') {
+    if (selected.size) { selected.clear(); applyMarks(); }
+    else if (presenting) togglePresenting();
+  } else if (k === 'Enter') openMenu();
+  else if (k === 's') openMenu('subst');
+  else if (k === 'n') openMenu('name');
+  else if (k === 'c') cycleColor();
+  else if (k === 'p') togglePresenting();
+  else if (k === 'l') copyText(toLatex(state().tree), 'LaTeX');
+  else if (k === 'e') {
+    input.value = toAscii(state().tree);
+    input.focus();
+    input.select();
+  } else return;
+  ev.preventDefault();
+});
+
+stage.addEventListener('click', (ev) => {
+  closeMenu();
+  const n = ev.target.closest('.formula.main .n');
+  if (!n) return;
+  const path = findPath(state().tree, n.dataset.key);
+  if (path) setFocus(path);
+});
+
+input.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') {
+    if (load(input.value)) stage.focus();
+    ev.preventDefault();
+  } else if (ev.key === 'Escape' && workspaces.length) {
+    stage.focus();
+  }
+});
+input.addEventListener('input', () => { inputError.textContent = ''; });
+
+// O layout dos expoentes e o ajuste de largura dependem das fontes e do
+// tamanho da janela.
+const relayout = () => {
+  stage.querySelectorAll('.board .formula').forEach((f) => fit(f, stageWidth(), stage.clientHeight * 0.2));
+  stage.querySelectorAll('.formula.main').forEach((f) => fit(f, stageWidth(), stageHeight()));
+  document.querySelectorAll('.side .formula.mini').forEach((f) => fit(f, f.parentElement.clientWidth - 40));
+};
+document.fonts.ready.then(relayout);
+addEventListener('resize', relayout);
+
+if (restore()) {
+  input.value = toAscii(state().tree);
+  refresh(false);
+} else {
+  input.value = EXAMPLE;
+  load(EXAMPLE);
+}
+stage.focus();
