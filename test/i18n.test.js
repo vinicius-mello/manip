@@ -48,8 +48,13 @@ test('grafias brasileiras de funções', () => {
 });
 
 test('teclas das operações: únicas, sem maiúsculas (reservadas aos comandos)', () => {
-  const keys = RULES.map((r) => r.key);
+  // Teclas compartilhadas de propósito, por operações que nunca valem juntas.
+  const SHARED = { '-': ['flipsigns', 'subeq'] };
+  const keys = RULES.filter((r) => !SHARED[r.key]).map((r) => r.key);
   assert.equal(new Set(keys).size, keys.length, 'teclas repetidas');
+  for (const [k, ids] of Object.entries(SHARED)) {
+    assert.deepEqual(RULES.filter((r) => r.key === k).map((r) => r.id).sort(), ids.sort());
+  }
   for (const k of keys) {
     assert.equal(k.length, 1, `tecla de um caractere: ${k}`);
     assert.ok(!/[A-Z]/.test(k), `maiúscula ${k} é comando`);

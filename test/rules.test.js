@@ -263,3 +263,19 @@ test('pôr em evidência selecionando o fator em cada parcela', () => {
   // duas seleções na mesma parcela
   assert.equal(run('factor', '2x + 3x = 0', [0, 0], [[0, 0, 0], [0, 0, 1]]), null);
 });
+
+test('trocar os sinais: A(B + C) → −A(−B − C)', () => {
+  assert.equal(run('flipsigns', '2(x - 1) = 4', [0]), '-2(-x + 1) = 4');
+  assert.equal(run('flipsigns', 'a(b + c) = 0', [0]), '-a(-b - c) = 0');
+  assert.equal(run('flipsigns', 'y + 2x(a + b) = 0', [0, 1]), 'y - 2x(-a - b) = 0', 'parcela de uma soma');
+  assert.equal(run('flipsigns', '(-a)(b + c) = 0', [0]), 'a(-b - c) = 0', 'fator já negativo');
+  assert.equal(run('flipsigns', '-a(b + c) = 0', [0, 0]), 'a(-b - c) = 0', 'produto dentro de −(…)');
+  assert.equal(run('flipsigns', '(b + c)x = 0', [0]), '-(-b - c)x = 0', 'soma como primeiro fator');
+  assert.equal(run('flipsigns', 'b + c = 0', [0]), '-(-b - c) = 0', 'soma sozinha');
+  assert.equal(run('flipsigns', 'a b = 0', [0]), null, 'sem soma');
+  // a mesma tecla "-" em sistemas continua subtraindo equações
+  const subeq = RULES.find((r) => r.id === 'subeq');
+  const tree = parseAscii('x + y = 3; x - y = 1');
+  assert.equal(RULES.find((r) => r.id === 'flipsigns').run({ tree, focus: [1], targets: [[0], [1]] }), null);
+  assert.ok(subeq.run({ tree, focus: [1], targets: [[0], [1]] }).tree);
+});

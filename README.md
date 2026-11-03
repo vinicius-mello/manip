@@ -45,12 +45,12 @@ e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atal
 | PgUp PgDn Home End | percorrer os passos |
 
 **Operações:**
-`c` calcular · `l` termos semelhantes · `x` cancelar · `0` elemento neutro · `r` regra de sinais ·
+`c` calcular · `l` termos semelhantes · `x` cancelar · `0` elemento neutro · `r` regra de sinais · `-` trocar os sinais (A(B + C) → −A(−B − C)) ·
 `d` distribuir · `e` pôr em evidência · `(` pôr entre parênteses · `p` remover parênteses · `g` agrupar ·
 `q` somar e subtrair… · `s` substituir… · `j` juntar frações · `f` separar fração ·
 `o` propriedades de potências · `u` escrever como potência · `m` potência como produto · `b` binômio ·
 `2` produto notável · `z` conjugado · `~` z ↔ z̄̄ · `h` z·z̄ ↔ |z|² · `v` z ± z̄ · `y` multiplicar pelo conjugado ·
-`=` operar nos dois lados… · `t` trocar os lados · `i` estimar… · `+` `-` somar/subtrair equações ·
+`=` operar nos dois lados… · `t` trocar os lados · `i` estimar… · `+` `-` somar/subtrair equações (duas selecionadas) ·
 `>` substituir a variável isolada · `n` dar nome… · `k` expandir nome · `w` abrir área de trabalho
 
 **Comandos:**
