@@ -26,6 +26,7 @@
         <option value="0">desligada</option>
       </select>
     </label>
+    <button id="kb-toggle" class="tool" type="button" aria-pressed="false" title="Teclado matemático (K)">Teclado</button>
     <details class="export">
       <summary>Exportar</summary>
       <div class="export-menu">
@@ -53,6 +54,8 @@
     </aside>
   </main>
 
+  <section id="keyboard" class="keyboard" aria-label="Teclado matemático" hidden></section>
+
   <footer class="keys">
     <span><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> navegar</span>
     <span><kbd>Ctrl</kbd>+<kbd>←</kbd><kbd>→</kbd> mover / passar para o outro lado</span>
@@ -67,6 +70,7 @@
     <span><kbd>E</kbd> editar</span>
     <span><kbd>L</kbd> copiar LaTeX</span>
     <span><kbd>P</kbd> apresentação</span>
+    <span><kbd>K</kbd> teclado</span>
     <span><kbd>Ctrl</kbd>+<kbd>Z</kbd> desfazer</span>
   </footer>
 

@@ -15,6 +15,7 @@ import { left, right, up, down } from './cursor.js';
 import { shiftSideways, shiftOut, shiftIn } from './moves.js';
 import { History } from './history.js';
 import { applicable } from './rules/index.js';
+import { createKeyboard } from './keyboard.js';
 
 const COLORS = 6;
 const STORAGE_KEY = 'manip.state.v3';
@@ -32,6 +33,8 @@ const toastEl = $('#toast');
 const speedSelect = $('#speed');
 const menuEl = $('#menu');
 const fileInput = $('#file');
+const kbToggle = $('#kb-toggle');
+const KB_KEY = 'manip.keyboard';
 
 let workspaces = [];
 let active = 0;
@@ -470,8 +473,11 @@ function positionMenu() {
   const r = target.getBoundingClientRect();
   const m = menuEl.getBoundingClientRect();
   const left = Math.min(Math.max(8, r.left + r.width / 2 - m.width / 2), innerWidth - m.width - 8);
+  // Com o teclado na tela aberto, o menu não pode cobrir as teclas.
+  const kb = $('#keyboard');
+  const bottom = kb.hidden ? innerHeight : kb.getBoundingClientRect().top;
   let top = r.bottom + 12;
-  if (top + m.height > innerHeight - 8) top = Math.max(8, r.top - m.height - 12);
+  if (top + m.height > bottom - 8) top = Math.max(8, Math.min(r.top - m.height - 12, bottom - m.height - 8));
   menuEl.style.left = `${left}px`;
   menuEl.style.top = `${top}px`;
 }
@@ -611,6 +617,19 @@ fileInput.addEventListener('change', async () => {
   stage.focus();
 });
 
+// ---------- teclado na tela ----------
+
+const keyboard = createKeyboard($('#keyboard'), { fallback: input });
+
+function toggleKeyboard(open) {
+  const isOpen = keyboard.toggle(open);
+  kbToggle.setAttribute('aria-pressed', String(isOpen));
+  try { localStorage.setItem(KB_KEY, isOpen ? '1' : ''); } catch { /* sem armazenamento */ }
+  relayout();
+}
+
+kbToggle.addEventListener('click', () => toggleKeyboard());
+
 // ---------- teclado ----------
 
 stage.addEventListener('keydown', (ev) => {
@@ -659,6 +678,7 @@ stage.addEventListener('keydown', (ev) => {
   else if (k === 'n') openMenu('name');
   else if (k === 'c') cycleColor();
   else if (k === 'p') togglePresenting();
+  else if (k === 'k') toggleKeyboard();
   else if (k === 'l') copyText(toLatex(state().tree), 'LaTeX');
   else if (k === 'e') {
     input.value = toAscii(state().tree);
@@ -695,6 +715,10 @@ const relayout = () => {
 };
 document.fonts.ready.then(relayout);
 addEventListener('resize', relayout);
+
+try {
+  if (localStorage.getItem(KB_KEY)) toggleKeyboard(true);
+} catch { /* sem armazenamento */ }
 
 if (restore()) {
   input.value = toAscii(state().tree);

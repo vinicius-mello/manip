@@ -76,7 +76,7 @@ body {
   color: var(--ink);
   font-family: var(--ui);
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
 }
 
 /* ---------- interface ---------- */
@@ -172,10 +172,10 @@ body {
 .tab.c0 { --chip: var(--c0); } .tab.c1 { --chip: var(--c1); } .tab.c2 { --chip: var(--c2); }
 .tab.c3 { --chip: var(--c3); } .tab.c4 { --chip: var(--c4); } .tab.c5 { --chip: var(--c5); }
 
-/* Exportar */
-.export { position: relative; font-size: 14px; }
+/* Botões da barra superior */
+.tool,
 .export summary {
-  list-style: none;
+  font: 14px/1.3 var(--ui);
   cursor: pointer;
   color: var(--muted);
   padding: 5px 10px;
@@ -183,6 +183,12 @@ body {
   border-radius: 8px;
   background: var(--panel);
 }
+
+.tool[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+
+/* Exportar */
+.export { position: relative; font-size: 14px; }
+.export summary { list-style: none; }
 .export summary::-webkit-details-marker { display: none; }
 .export[open] summary { color: var(--ink); }
 .export-menu {
@@ -550,13 +556,108 @@ kbd {
 .c4 { color: var(--c4); }
 .c5 { color: var(--c5); }
 
+/* ---------- teclado na tela ---------- */
+
+.keyboard {
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  padding: 10px 16px 14px;
+}
+
+.keyboard > * { max-width: 920px; margin-inline: auto; }
+
+.kb-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  overflow: hidden;
+}
+
+.kb-preview .formula { font-size: 26px; }
+.kb-preview .hint { color: var(--muted); font-size: 13px; }
+
+.kb-tabs { display: flex; gap: 4px; margin: 6px auto 8px; }
+
+.kb-body { display: flex; gap: 10px; }
+
+.kb-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
+  gap: 6px;
+}
+
+.kb-side {
+  display: grid;
+  grid-template-columns: repeat(2, 54px);
+  grid-auto-rows: 46px;
+  gap: 6px;
+}
+
+.kb-side .enter { grid-column: span 2; grid-row: span 2; height: auto; }
+
+.kb-key {
+  height: 46px;
+  min-width: 0;
+  font: 21px/1 var(--math);
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform .06s, background-color .12s;
+}
+
+.kb-key:hover { background: var(--focus-bg); }
+.kb-key:active { transform: translateY(1px) scale(.97); }
+.kb-key.op { color: var(--accent); }
+.kb-key.fn { font: 15px/1 var(--ui); }
+.kb-key.nav { font: 18px/1 var(--ui); color: var(--muted); }
+.kb-key.enter { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.kb-key.tab { height: auto; padding: 5px 12px; font: 13px/1.3 var(--ui); color: var(--muted); }
+.kb-key.tab.active { color: var(--ink); border-color: var(--accent); }
+.kb-key i { font-style: italic; }
+.kb-key sup, .kb-key sub { font-size: .6em; }
+
+.kb-frac {
+  display: inline-flex;
+  flex-direction: column;
+  font-size: .62em;
+  line-height: 1.05;
+  font-style: italic;
+}
+
+.kb-frac > span + span { border-top: 1.5px solid currentColor; }
+
+.kb-box {
+  display: inline-block;
+  width: .55em;
+  height: .72em;
+  vertical-align: -.08em;
+  border: 1.5px dashed currentColor;
+  border-radius: 2px;
+  opacity: .7;
+}
+
+.kb-box.sm { width: .6em; height: .75em; }
+
+@media (max-width: 760px) {
+  .keyboard { padding: 8px 8px 10px; }
+  .kb-key { height: 42px; font-size: 19px; }
+  .kb-side { grid-template-columns: repeat(2, 44px); grid-auto-rows: 42px; }
+}
+
 /* ---------- apresentação ---------- */
 
 body.presenting { grid-template-rows: 1fr; }
 body.presenting .top,
 body.presenting .keys,
 body.presenting .side,
-body.presenting .tabs { display: none; }
+body.presenting .tabs,
+body.presenting .keyboard { display: none; }
 body.presenting .layout { grid-template-columns: 1fr; }
 body.presenting { --formula-size: clamp(40px, 8vw, 104px); }
 body.presenting #stage { flex-direction: column; gap: 28px; padding: 32px 40px; overflow: hidden; }
