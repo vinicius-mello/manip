@@ -213,3 +213,25 @@ test('juntar termos semelhantes', () => {
   assert.equal(run('like', '2 + 3 = x', [0, 0]), null, 'constantes: calcular');
   assert.equal(run('like', 'a + b + a = 0', [0, 0], [[0, 0], [0, 2]]), '2a + b = 0');
 });
+
+test('produtos notáveis no sentido inverso', () => {
+  assert.equal(run('notable', 'x^2 + 6x + 9 = 0', [0]), '(x + 3)^2 = 0');
+  assert.equal(run('notable', 'x^2 - 6x + 9 = 0', [0, 0]), '(x - 3)^2 = 0', 'foco num termo');
+  assert.equal(run('notable', '9 + x^2 + 6x = 0', [0]), '(3 + x)^2 = 0', 'termos em outra ordem');
+  assert.equal(run('notable', '4x^2 + 12xy + 9y^2 = 0', [0]), '(2x + 3y)^2 = 0');
+  assert.equal(run('notable', 'a^2 + 2ba + b^2 = 0', [0]), '(a + b)^2 = 0', 'fatores do meio em outra ordem');
+  assert.equal(run('notable', 'x^2 - 4 = 0', [0]), '(x + 2)(x - 2) = 0');
+  assert.equal(run('notable', '-y^2 + x^4 = 0', [0]), '(x^2 + y)(x^2 - y) = 0');
+  assert.equal(run('notable', 'x^2 + 5x + 9 = 0', [0]), null);
+  assert.equal(run('notable', 'x^2 + 4 = 0', [0]), null, 'soma de quadrados não fatora');
+  assert.equal(run('notable', 'x^2 + 6x + 9 + y = 0', [0, 0], [[0, 0], [0, 1], [0, 2]]), '(x + 3)^2 + y = 0', 'seleção');
+});
+
+test('sugestão para completar quadrado', () => {
+  const add = RULES.find((r) => r.id === 'addsub');
+  const sug = (src, focus, sel = []) => add.suggest({ tree: parseAscii(src), focus, targets: sel.length ? sel : [focus] });
+  assert.equal(sug('x^2 + 6x = 7', [0]), '9');
+  assert.equal(sug('x^2 - 3x = 7', [0]), '9/4');
+  assert.equal(sug('y = x^2 + x', [1]), '1/4');
+  assert.equal(sug('x^2 + 6y = 7', [0]), null);
+});

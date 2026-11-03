@@ -24,6 +24,7 @@ import { msg } from '../i18n.js';
 import { isRelation, FLIP, direction, RELATIONS, RELATION_INPUT } from '../relations.js';
 import { scaledRelation } from '../moves.js';
 import { evaluate, evaluateComplex, ratToNode, complexToNode } from './arith.js';
+import { monomial as normalMonomial, sameMonomial, negateMonomial, squareRoot } from './monomial.js';
 import {
   terms, factors, unparen, signed, parentPath, lastIndex, parentOf,
   siblingsOf, cloneFrom, spliceFlat,
@@ -786,6 +787,96 @@ function timesConjugate(ctx) {
   });
 }
 
+// ------------------------------------- produtos notáveis (sentido inverso)
+
+// Termos envolvidos: os selecionados de uma soma, ou a soma em foco (ou a
+// soma da qual o foco é termo).
+function sumTerms(ctx) {
+  const { tree, targets, focus } = ctx;
+  const sib = siblingsOf(targets);
+  if (sib && parentOf(tree, targets[0])?.op === 'Add') return { sp: parentPath(targets[0]), idx: sib };
+  let sp = focus;
+  if (getAt(tree, sp).op !== 'Add') sp = parentPath(focus);
+  if (!focus.length || getAt(tree, sp)?.op !== 'Add') return null;
+  return { sp, idx: getAt(tree, sp).args.map((_, i) => i) };
+}
+
+// a² ± 2ab + b² → (a ± b)²  e  a² − b² → (a + b)(a − b)
+function notableProducts(ctx) {
+  const { tree } = ctx;
+  const where = sumTerms(ctx);
+  if (!where) return null;
+  const S = getAt(tree, where.sp);
+  const ts = where.idx.map((i) => S.args[i]);
+  let result = null;
+
+  if (ts.length === 2) {
+    const [a, b] = ts.map(signed);
+    // um quadrado positivo e um negativo, em qualquer ordem
+    const [p, q] = a.neg ? [b, a] : [a, b];
+    if (!p.neg && q.neg) {
+      const r1 = squareRoot(p.body);
+      const r2 = squareRoot(q.body);
+      if (r1 && r2) {
+        const c = {};
+        result = fn('Multiply', fn('Add', r1, r2), fn('Add', cloneFrom(r1, c), fn('Negate', cloneFrom(r2, c))));
+      }
+    }
+  } else if (ts.length === 3) {
+    // dois quadrados positivos e o termo do meio igual a ±2·r1·r2
+    for (let m = 0; m < 3 && !result; m++) {
+      const [i, j] = [0, 1, 2].filter((k) => k !== m);
+      const A = signed(ts[i]);
+      const B = signed(ts[j]);
+      if (A.neg || B.neg) continue;
+      const r1 = squareRoot(A.body);
+      const r2 = squareRoot(B.body);
+      if (!r1 || !r2) continue;
+      const twice = normalMonomial(fn('Multiply', num(2), r1, r2));
+      const mid = normalMonomial(ts[m]);
+      if (sameMonomial(mid, twice)) result = fn('Power', fn('Add', r1, r2), num(2));
+      else if (sameMonomial(mid, negateMonomial(twice))) result = fn('Power', fn('Add', r1, fn('Negate', r2)), num(2));
+    }
+  }
+  if (!result) return null;
+
+  const t2 = where.idx.length === S.args.length
+    ? place(tree, where.sp, result)
+    : replaceAt(tree, where.sp, withArgs(S, (() => {
+      const args = S.args.filter((_, k) => !where.idx.includes(k) || k === where.idx[0]);
+      args[args.indexOf(S.args[where.idx[0]])] = result;
+      return args;
+    })()));
+  return { tree: t2, label: msg('step.notable'), focus: result.id };
+}
+
+// Sugestão para "somar e subtrair": em x² + bx, o (b/2)² que completa o quadrado.
+function completeSquareSuggestion(ctx) {
+  const where = sumTerms(ctx);
+  if (!where) return null;
+  const S = getAt(ctx.tree, where.sp);
+  const ts = where.idx.map((i) => S.args[i]);
+  for (const sq of ts) {
+    if (sq.op !== 'Power' || !isNum(sq.args[1], 2)) continue;
+    const key = toAscii(sq.args[0]);
+    for (const lin of ts) {
+      const m = normalMonomial(lin);
+      if (!m || lin === sq || m.factors.size !== 1 || m.factors.get(key) !== 1) continue;
+      // (b/2)² = b²/4
+      const r = { n: m.coef.n * m.coef.n, d: m.coef.d * m.coef.d * 4n };
+      return toAscii(ratToNode(reduce(r)));
+    }
+  }
+  return null;
+}
+
+const reduce = ({ n, d }) => {
+  let a = n < 0n ? -n : n;
+  let b = d;
+  while (b) [a, b] = [b, a % b];
+  return { n: n / a, d: d / a };
+};
+
 // --------------------------------------------- expansão de potências
 
 const MAX_TERMS = 60;
@@ -1078,6 +1169,7 @@ export const RULES = [
   {
     id: 'addsub', key: 'q', group: 'structure', run: addSubtract,
     input: true,
+    suggest: completeSquareSuggestion,
     available: (ctx) => ctx.targets.every((p) => !isRelation(getAt(ctx.tree, p).op)),
   },
   {
@@ -1093,6 +1185,7 @@ export const RULES = [
   { id: 'aspower', key: 'u', group: 'powers', run: asPower },
   { id: 'asproduct', key: 'm', group: 'powers', run: powerAsProduct },
   { id: 'binomial', key: 'b', group: 'powers', run: expandPower },
+  { id: 'notable', key: '2', group: 'powers', run: notableProducts },
   // complexos
   { id: 'conj', key: 'z', group: 'complex', run: conjugateProps },
   { id: 'dconj', key: '~', group: 'complex', run: doubleConjugate },

@@ -556,7 +556,7 @@ function openMenu(ruleId) {
     toast(t('toast.noOps'));
     return;
   }
-  menu = { all: items, items, index: direct, input: !!ruleId, inputText: '', query: null };
+  menu = { all: items, items, index: direct, input: !!ruleId, inputText: null, query: null };
   drawMenu();
 }
 
@@ -645,6 +645,8 @@ function drawMenu() {
     inp.className = 'menu-input';
     inp.placeholder = t(`rule.${rule.id}.ph`);
     inp.spellcheck = false;
+    // Primeira vez: a regra pode sugerir um valor (ex.: o que completa o quadrado).
+    if (menu.inputText === null) menu.inputText = rule.suggest?.(ruleContext()) ?? '';
     inp.value = menu.inputText;
     inp.addEventListener('input', () => {
       menu.inputText = inp.value;
@@ -668,6 +670,7 @@ function drawMenu() {
     updateInputPreview(box, inp.value);
     positionMenu();
     inp.focus();
+    inp.select();
     return;
   }
 
