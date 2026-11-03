@@ -5,7 +5,7 @@
 // equação "K = definição" para ser manipulada à parte. A definição atual de
 // um nome é o outro lado dessa equação.
 
-import { getAt, replaceAt, findPath, strip, cloneFresh, sym, fn } from './ast.js';
+import { getAt, replaceAt, findPath, cloneFresh, reserveIds, sym, fn } from './ast.js';
 import { parseInput, ParseError } from './input.js';
 import { toAscii, toLatex } from './serialize.js';
 import { toMathJson } from './mathjson.js';
@@ -174,9 +174,11 @@ function fitMain(root) {
 
 // Altura útil do palco (descontado o quadro de passos na apresentação).
 const availableHeight = () => {
-  if (presenting) return stageHeight();
+  const cap = stage.querySelector('.caption');
+  const capH = cap ? cap.offsetHeight + 16 : 0;
+  if (presenting) return stageHeight() - capH;
   const cs = getComputedStyle(stage);
-  return stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  return stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - capH;
 };
 
 // Esmaecimento nas bordas quando há conteúdo fora da área visível.
@@ -214,6 +216,24 @@ function staticFormula(tree, cls = 'formula mini') {
   return f;
 }
 
+// Nota do passo, logo abaixo da fórmula; na apresentação, também "passo i de n".
+function drawCaption() {
+  stage.querySelector('.caption')?.remove();
+  const h = history();
+  const note = h.current.note;
+  if (!note && !presenting) return;
+  const cap = document.createElement('div');
+  cap.className = 'caption';
+  if (note) cap.append(Object.assign(document.createElement('p'), { className: 'note', textContent: note }));
+  if (presenting) {
+    cap.append(Object.assign(document.createElement('p'), {
+      className: 'counter',
+      textContent: t('present.counter', { i: h.index + 1, n: h.steps.length }),
+    }));
+  }
+  stage.append(cap);
+}
+
 // Modo apresentação: os passos anteriores ficam empilhados acima, como num quadro.
 function drawBoard() {
   let board = stage.querySelector('.board');
@@ -247,6 +267,7 @@ function drawFormula({ animate = false, arcKey = null, hints } = {}) {
   if (oldRoot) oldRoot.classList.add('leaving');
   drawBoard();
   stage.append(root);
+  drawCaption();
   fitMain(root);
   applyMarks();
   if (oldRects) play({ stage, oldRoot, oldRects, newRoot: root, arcKey, hints, duration: duration() });
@@ -277,11 +298,10 @@ function drawHistory() {
     label.className = 'step-label';
     label.textContent = fmt(step.label);
     li.append(label, staticFormula(step.tree));
+    if (step.note) li.append(Object.assign(document.createElement('span'), { className: 'step-note', textContent: step.note }));
     li.tabIndex = 0;
     li.addEventListener('click', () => {
-      h.goto(i);
-      selected.clear();
-      refresh(true);
+      stepTo(i);
       stage.focus();
     });
     li.addEventListener('keydown', (ev) => {
@@ -357,9 +377,22 @@ function keepFocus(tree, focusId) {
   }
 }
 
+// Cada passo guarda a sua animação (arco, fusões, riscos...), que é
+// reproduzida igual ao avançar pelo histórico ou numa apresentação.
 function commit(tree, label, focusId = state().focusId, arcKey = null, hints = undefined) {
-  history().push({ tree, focusId: keepFocus(tree, focusId), label });
+  history().push({ tree, focusId: keepFocus(tree, focusId), label, arc: arcKey, hints });
   refresh(true, arcKey, hints);
+}
+
+// Vai para o passo i. Avançando um passo, repete a animação gravada nele.
+function stepTo(i) {
+  const h = history();
+  if (i < 0 || i >= h.steps.length || i === h.index) return bump();
+  const forward = i === h.index + 1;
+  h.goto(i);
+  selected.clear();
+  const s = h.current;
+  refresh(true, forward ? s.arc : null, forward ? s.hints : undefined);
 }
 
 function setFocus(path) {
@@ -482,6 +515,36 @@ function ruleContext(text) {
     .filter(Boolean)
     .sort((a, b) => (a.join() < b.join() ? -1 : 1));
   return { tree, focus, targets: targets.length ? targets : [focus], input: text, definitions: definitions() };
+}
+
+// Nota do passo atual (tecla O): Enter salva, Shift+Enter quebra a linha,
+// Esc cancela, texto vazio apaga a nota.
+function openNote() {
+  closeMenu();
+  const step = state();
+  const box = document.createElement('div');
+  box.className = 'note-editor';
+  const title = Object.assign(document.createElement('span'), { className: 'hint', textContent: t('note.title') });
+  const ta = Object.assign(document.createElement('textarea'), {
+    className: 'menu-input', rows: 2, value: step.note ?? '', placeholder: t('note.ph'),
+  });
+  ta.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' && !ev.shiftKey) {
+      step.note = ta.value.trim() || undefined;
+      closeMenu();
+      refresh(false);
+    } else if (ev.key === 'Escape') closeMenu();
+    else return;
+    ev.preventDefault();
+    ev.stopPropagation();
+  });
+  box.append(title, ta, Object.assign(document.createElement('span'), { className: 'hint', textContent: t('note.hint') }));
+  menu = { kind: 'note' };
+  menuEl.replaceChildren(box);
+  menuEl.hidden = false;
+  positionMenu();
+  ta.focus();
+  ta.select();
 }
 
 // ruleId abre o menu direto na entrada de texto daquela regra (S, N).
@@ -687,18 +750,20 @@ menuEl.addEventListener('keydown', (ev) => {
 
 // ---------- exportação e persistência ----------
 
+// As árvores são salvas com os ids: assim as transições entre passos (e
+// as animações gravadas) continuam valendo depois de abrir o arquivo.
 function serialize() {
   return {
     format: 'manip',
-    version: 3,
+    version: 4,
     active,
     workspaces: workspaces.map((w) => ({
       id: w.id,
       title: w.title,
       color: w.color,
-      def: w.def && strip(w.def),
+      def: w.def,
       index: w.history.index,
-      steps: w.history.steps.map((s) => ({ tree: strip(s.tree), label: s.label })),
+      steps: w.history.steps.map((s) => ({ tree: s.tree, label: s.label, note: s.note, arc: s.arc, hints: s.hints })),
     })),
   };
 }
@@ -708,11 +773,15 @@ function deserialize(data) {
   workspaces = data.workspaces.map((w) => {
     const h = new History();
     for (const s of w.steps) {
-      const tree = cloneFresh(s.tree);
-      h.push({ tree, focusId: (tree.args?.[0] ?? tree).id, label: s.label });
+      // Arquivos antigos (versão 3) vinham sem ids.
+      const tree = s.tree.id ? s.tree : cloneFresh(s.tree);
+      reserveIds(tree);
+      h.push({ tree, focusId: (tree.args?.[0] ?? tree).id, label: s.label, note: s.note, arc: s.arc, hints: s.hints });
     }
     h.goto(w.index);
-    return { id: w.id, title: w.title, color: w.color, def: w.def && cloneFresh(w.def), history: h };
+    const def = w.def && (w.def.id ? w.def : cloneFresh(w.def));
+    if (def) reserveIds(def);
+    return { id: w.id, title: w.title, color: w.color, def, history: h };
   });
   active = Math.min(data.active ?? 0, workspaces.length - 1);
   selected.clear();
@@ -738,9 +807,10 @@ function stepsLatex() {
   const lines = [];
   for (const s of history().steps.slice(0, history().index + 1)) {
     const t = s.tree;
-    const line = isRelation(t.op)
+    let line = isRelation(t.op)
       ? `${toLatex(t.args[0])} &${LATEX_RELATIONS[t.op]} ${toLatex(t.args[1])}`
       : `&${toLatex(t)}`;
+    if (s.note) line += ` && \\text{${s.note.replace(/[\\{}$&#%_^~]/g, (c) => `\\${c}`)}}`;
     if (lines[lines.length - 1] !== line) lines.push(line);
   }
   return `\\begin{aligned}\n${lines.join(' \\\\\n')}\n\\end{aligned}`;
@@ -849,6 +919,7 @@ $('#keys-toggle').addEventListener('click', () => {
 // ---------- teclado ----------
 
 stage.addEventListener('keydown', (ev) => {
+  if (menu?.kind === 'note') return;
   if (menu) {
     menuKey(ev);
     return;
@@ -863,23 +934,16 @@ stage.addEventListener('keydown', (ev) => {
   };
 
   if ((ctrl || ev.altKey) && moves[k]) move(...moves[k]);
-  else if (ctrl && (k === 'z' || k === 'Z')) {
-    ev.shiftKey ? history().redo() : history().undo();
-    selected.clear();
-    refresh(true);
-  } else if (ctrl && k === 'y') {
-    history().redo();
-    refresh(true);
-  } else if (ctrl) {
+  else if (ctrl && (k === 'z' || k === 'Z')) stepTo(history().index + (ev.shiftKey ? 1 : -1));
+  else if (ctrl && k === 'y') stepTo(history().index + 1);
+  else if (ctrl) {
     return;
   } else if (k === 'Tab') {
     if (workspaces.length < 2) return;
     switchTo((active + (ev.shiftKey ? -1 : 1) + workspaces.length) % workspaces.length);
-  } else if (presenting && (k === 'PageUp' || k === 'PageDown')) {
-    k === 'PageUp' ? history().undo() : history().redo();
-    selected.clear();
-    refresh(true);
-  } else if (ev.shiftKey && k === 'ArrowLeft') extendSelection(-1);
+  } else if (k === 'PageUp' || k === 'PageDown') stepTo(history().index + (k === 'PageUp' ? -1 : 1));
+  else if (k === 'Home') stepTo(0);
+  else if (k === 'End') stepTo(history().steps.length - 1); else if (ev.shiftKey && k === 'ArrowLeft') extendSelection(-1);
   else if (ev.shiftKey && k === 'ArrowRight') extendSelection(+1);
   else if (nav[k] && !ev.shiftKey) {
     anchorId = null;
@@ -896,6 +960,7 @@ stage.addEventListener('keydown', (ev) => {
   else if (k === 'c') cycleColor();
   else if (k === 'p') togglePresenting();
   else if (k === 'k') toggleKeyboard();
+  else if (k === 'o') openNote();
   else if (k === '?') document.querySelector('.keys').classList.toggle('expanded');
   else if (k === '+' || k === '=') setZoom(zoom * 1.15);
   else if (k === '-') setZoom(zoom / 1.15);

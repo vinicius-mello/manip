@@ -55,12 +55,15 @@ export function cloneFresh(n) {
   return c;
 }
 
-// Árvore sem ids, para salvar; cloneFresh() a traz de volta com ids novos.
-export function strip(n) {
-  const { id, ...rest } = n;
-  if (n.args) rest.args = n.args.map(strip);
-  return rest;
+// Ao abrir um arquivo salvo com ids, o contador passa do maior id usado,
+// para que nós novos não colidam com os antigos.
+export function reserveIds(n) {
+  walk(n, (x) => {
+    const k = Number(/^n(\d+)$/.exec(x.id ?? '')?.[1]);
+    if (k >= nextId) nextId = k + 1;
+  });
 }
+
 
 // Igualdade estrutural (ignora ids e propriedades visuais).
 export function same(a, b) {

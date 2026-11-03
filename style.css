@@ -321,6 +321,8 @@ body {
 #stage {
   position: relative;
   display: flex;
+  flex-direction: column;
+  gap: 16px;
   align-items: safe center;
   justify-content: safe center;
   padding: 40px 24px;
@@ -381,6 +383,18 @@ body {
 
 .step-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
 .step-label::before { content: counter(step) ". "; }
+.step-note { display: block; margin-top: 4px; font-size: 13px; font-style: italic; color: var(--muted); }
+
+/* Nota do passo e contador, abaixo da fórmula */
+.caption { text-align: center; max-width: 60ch; animation: caption-in var(--t-med) ease-out; }
+.caption p { margin: 0; }
+.caption .note { font: italic 20px/1.4 var(--math); color: var(--muted); }
+.caption .counter { margin-top: 6px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+body.presenting .caption .note { font-size: clamp(20px, 2.4vw, 32px); }
+@keyframes caption-in { from { opacity: 0; transform: translateY(4px); } }
+
+.note-editor { display: flex; flex-direction: column; gap: 8px; padding: 12px; min-width: 320px; }
+.note-editor textarea { resize: vertical; font: 16px/1.4 var(--ui); }
 
 .keys {
   display: flex;
