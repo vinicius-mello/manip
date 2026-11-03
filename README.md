@@ -25,6 +25,11 @@ uma escolha explícita, com animação, e fica registrado no histórico.
 
 ## Teclas
 
+Folha de atalhos para imprimir, com um exemplo de cada operação:
+[português](https://vinicius-mello.github.io/manip/cheatsheet.html?lang=pt) ·
+[English](https://vinicius-mello.github.io/manip/cheatsheet.html?lang=en) ·
+PDF: [atalhos](docs/manip-atalhos.pdf) · [cheat sheet](docs/manip-cheatsheet.pdf)
+
 As teclas seguem a ideia de um editor modal: **minúsculas, dígitos e símbolos
 aplicam operações direto na fórmula** (as mesmas teclas valem no menu do Enter),
 e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atalhos.
@@ -60,6 +65,7 @@ simbólico é próprio (pasta `src/rules/`); MathJSON é usado como formato de t
 ```sh
 npm start   # servidor local sem cache em http://127.0.0.1:8765
 npm test    # testes (node --test)
+npm run cheatsheet   # regenera os PDFs da folha de atalhos (usa o Chrome)
 npm run publish -- "descrição"   # envia ao GitHub e atualiza o site
 ```
 

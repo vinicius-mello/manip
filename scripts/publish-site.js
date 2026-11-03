@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const site = process.env.MANIP_SITE ?? join(homedir(), 'code', 'vinicius-mello.github.io');
 const dest = join(site, 'manip');
-const FILES = ['index.html', 'style.css', 'src'];
+const FILES = ['index.html', 'cheatsheet.html', 'style.css', 'src', 'docs'];
 const today = new Date().toISOString().slice(0, 10);
 
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
@@ -37,7 +37,7 @@ const sha = git(root, 'rev-parse', '--short', 'HEAD');
 
 // 2. Cópia dos arquivos do app (src/ é recriada: arquivos removidos somem)
 git(site, 'pull', '-q', '--ff-only');
-rmSync(join(dest, 'src'), { recursive: true, force: true });
+for (const dir of ['src', 'docs']) rmSync(join(dest, dir), { recursive: true, force: true });
 for (const f of FILES) cpSync(join(root, f), join(dest, f), { recursive: true });
 
 // 3. Data no sitemap

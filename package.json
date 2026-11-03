@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node scripts/serve.js",
     "publish": "node scripts/publish-site.js",
+    "cheatsheet": "node scripts/cheatsheet-pdf.js",
     "test": "node --test test/"
   }
 }
