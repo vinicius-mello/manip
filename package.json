@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/serve.js",
+    "publish": "node scripts/publish-site.js",
     "test": "node --test test/"
   }
 }

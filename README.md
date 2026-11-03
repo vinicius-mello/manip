@@ -46,4 +46,5 @@ simbólico é próprio (pasta `src/rules/`); MathJSON é usado como formato de t
 ```sh
 npm start   # servidor local sem cache em http://127.0.0.1:8765
 npm test    # testes (node --test)
+npm run publish -- "descrição"   # envia ao GitHub e atualiza o site
 ```
