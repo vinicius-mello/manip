@@ -334,6 +334,41 @@ function group(ctx) {
   return { tree: replaceAt(tree, pp, withArgs(parent, args)), label: msg('step.group'), focus: g.id };
 }
 
+// ------------------------------------------------- pôr entre parênteses
+
+// Acrescenta um nível de parênteses (Delimiter) em volta da seleção. Vários
+// irmãos vizinhos de uma soma/produto viram um grupo só; seleções soltas
+// ganham parênteses cada uma.
+function wrapParens(ctx) {
+  const { tree, targets } = ctx;
+  const idx = siblingsOf(targets);
+  if (idx) {
+    const pp = parentPath(targets[0]);
+    const parent = getAt(tree, pp);
+    const contiguous = idx.every((v, i) => i === 0 || v === idx[i - 1] + 1);
+    if ((parent.op === 'Add' || parent.op === 'Multiply') && contiguous) {
+      // A soma inteira selecionada: os parênteses vão em volta dela.
+      if (idx.length === parent.args.length) return wrapParens({ ...ctx, targets: [pp] });
+      const g = fn('Delimiter', fn(parent.op, ...idx.map((i) => parent.args[i])));
+      const args = parent.args.slice();
+      args.splice(idx[0], idx.length, g);
+      return { tree: replaceAt(tree, pp, withArgs(parent, args)), label: msg('step.wrapParens'), focus: g.id };
+    }
+  }
+  // De trás para a frente: envolver um nó interno não muda o caminho de um
+  // nó que vem antes dele.
+  let t2 = tree;
+  let focus = null;
+  for (const p of [...targets].reverse()) {
+    const n = getAt(t2, p);
+    if (n.op === 'Equal') return null;
+    const d = fn('Delimiter', n);
+    focus = d.id;
+    t2 = replaceAt(t2, p, d);
+  }
+  return { tree: t2, label: msg('step.wrapParens'), focus };
+}
+
 // --------------------------------------------------------------- frações
 
 function joinFractions(ctx) {
@@ -704,6 +739,7 @@ export const RULES = [
   { id: 'neutral', key: 'n', run: neutral },
   { id: 'signs', key: 'r', run: signs },
   { id: 'parens', key: 'p', run: removeParens },
+  { id: 'wrap', key: '(', run: wrapParens },
   { id: 'group', key: 'g', run: group },
   { id: 'join', key: 'j', run: joinFractions },
   { id: 'split', key: 'f', run: splitFraction },

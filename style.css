@@ -656,6 +656,10 @@ kbd { min-width: 1.8em; }
 .paren.l { left: .03em; }
 .paren.r { right: .03em; }
 
+/* Parênteses em volta de parênteses: o par de fora fica um pouco maior. */
+.delim:has(> .delim-body > .Delimiter) > .paren { top: -.1em; height: calc(100% + .2em); }
+.delim:has(> .delim-body > .Delimiter) { padding: 0 .34em; }
+
 /* Raiz */
 .sqrtbox {
   display: inline-block;

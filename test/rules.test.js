@@ -181,3 +181,13 @@ test('potência como produto', () => {
   assert.equal(run('asproduct', '2^3 = x', [0]), '2*2*2 = x');
   assert.equal(run('asproduct', 'x^n = 0', [0]), null);
 });
+
+test('pôr entre parênteses', () => {
+  assert.equal(run('wrap', 'x + 1 = 2', [0]), '(x + 1) = 2');
+  assert.equal(run('wrap', '(x + 1) = 2', [0]), '((x + 1)) = 2', 'nível extra');
+  assert.equal(run('wrap', 'a + b + c = 0', [0, 1], [[0, 1], [0, 2]]), 'a + (b + c) = 0');
+  assert.equal(run('wrap', 'a b c = 0', [0, 0], [[0, 0], [0, 1]]), '(ab)c = 0');
+  assert.equal(run('wrap', 'a + b = 0', [0, 0], [[0, 0], [0, 1]]), '(a + b) = 0', 'soma inteira');
+  assert.equal(run('wrap', 'a + b + c = 0', [0, 0], [[0, 0], [0, 2]]), '(a) + b + (c) = 0', 'não vizinhos');
+  assert.equal(run('wrap', 'x = 2', []), null, 'não na equação inteira');
+});

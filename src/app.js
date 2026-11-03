@@ -480,6 +480,13 @@ function openMenu(ruleId) {
   drawMenu();
 }
 
+// Aplica uma regra direto, sem abrir o menu (atalhos como "(").
+function applyRule(id) {
+  const item = applicable(ruleContext()).find((x) => x.rule.id === id);
+  if (!item) return bump();
+  applyResult(item.result);
+}
+
 function closeMenu() {
   if (!menu) return;
   menu = null;
@@ -818,6 +825,7 @@ stage.addEventListener('keydown', (ev) => {
     else if (presenting) togglePresenting();
   } else if (k === 'Enter') openMenu();
   else if (k === 's') openMenu('subst');
+  else if (k === '(' || k === ')') applyRule('wrap');
   else if (k === 'n') openMenu('name');
   else if (k === 'c') cycleColor();
   else if (k === 'p') togglePresenting();
