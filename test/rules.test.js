@@ -248,3 +248,18 @@ test('pôr em evidência: fator com sinal, entre parênteses e soma solta', () =
   // −b em toda a soma
   assert.equal(run('factor', '-b + a*b = 0', [0, 0]), '-b(1 - a) = 0');
 });
+
+test('pôr em evidência selecionando o fator em cada parcela', () => {
+  // b de −b e b de ab (só o b, sem o sinal)
+  assert.equal(run('factor', '1 - a - b + a*b = 0', [0, 0], [[0, 2, 0], [0, 3, 1]]), '1 - a + b(-1 + a) = 0');
+  // a parcela −b inteira e o b de ab: fator −b
+  assert.equal(run('factor', '1 - a - b + a*b = 0', [0, 0], [[0, 2], [0, 3, 1]]), '1 - a - b(1 - a) = 0');
+  // 1 e −a (parcelas vizinhas) + o (1 − a) de dentro
+  assert.equal(run('factor', '1 - a - b(1 - a) = 0', [0, 0], [[0, 0], [0, 1], [0, 2, 0, 1]]), '(1 - a)(1 - b) = 0');
+  // fator x nas parcelas 2x e 3xy (a terceira fica de fora)
+  assert.equal(run('factor', '2x + 3x*y + 5 = 0', [0, 2], [[0, 0, 1], [0, 1, 1]]), '(2 + 3y)x + 5 = 0');
+  // seleções que não são o mesmo fator
+  assert.equal(run('factor', '2x + 3y = 0', [0, 0], [[0, 0, 1], [0, 1, 1]]), null);
+  // duas seleções na mesma parcela
+  assert.equal(run('factor', '2x + 3x = 0', [0, 0], [[0, 0, 0], [0, 0, 1]]), null);
+});
