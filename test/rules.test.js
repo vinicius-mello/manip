@@ -76,11 +76,13 @@ test('agrupar, frações e potências', () => {
   assert.equal(run('join', 'x/2 - y/2 = 1', [0]), '(x - y)/2 = 1');
   assert.equal(run('join', 'x/2 + y/3 = 1', [0]), null);
   assert.equal(run('split', '(x + y)/2 = 1', [0]), 'x/2 + y/2 = 1');
-  assert.equal(run('powers', 'x^2 x^3 = 1', [0, 0]), 'x^(2 + 3) = 1');
-  assert.equal(run('powers', 'x x = 1', [0, 0]), null, 'x·x é "escrever como potência"');
-  assert.equal(run('powers', 'x^2 x = 1', [0]), 'x^(2 + 1) = 1', 'foco no produto');
-  assert.equal(run('powers', 'x^5/x^2 = 1', [0]), 'x^(5 - 2) = 1');
-  assert.equal(run('powers', '(x^2)^3 = 1', [0]), 'x^(2*3) = 1');
+  assert.equal(run('powers', 'x^2 x^3 = 1', [0, 0]), 'x^5 = 1');
+  assert.equal(run('powers', 'x^2 x = 1', [0]), 'x^3 = 1', 'foco no produto');
+  assert.equal(run('powers', 'x^5/x^2 = 1', [0]), 'x^3 = 1');
+  assert.equal(run('powers', 'x^2/x^5 = 1', [0]), 'x^(-3) = 1');
+  assert.equal(run('powers', 'x^3/x^2 = 1', [0]), 'x = 1', 'expoente 1');
+  assert.equal(run('powers', '(x^2)^3 = 1', [0]), 'x^6 = 1');
+  assert.equal(run('powers', 'x^n x^2 = 1', [0]), 'x^(n + 2) = 1', 'simbólico fica indicado');
 });
 
 test('operações na equação', () => {
@@ -194,12 +196,12 @@ test('pôr entre parênteses', () => {
 });
 
 test('escrever como potência', () => {
-  assert.equal(run('aspower', 'aa + bb = 0', [0, 0]), 'a^2 + bb = 0', 'foco no produto');
-  assert.equal(run('aspower', 'aa + bb = 0', [0, 1, 0]), 'aa + b^2 = 0', 'foco num fator');
-  assert.equal(run('aspower', 'a a b a = 0', [0]), 'a^3b = 0');
-  assert.equal(run('aspower', 'a a a = 0', [0, 0], [[0, 0], [0, 1]]), 'a^2a = 0', 'só os selecionados');
-  assert.equal(run('aspower', 'ab = 0', [0]), null);
-  assert.equal(run('aspower', 'x^2 x = 0', [0]), null, 'com expoente: propriedade de potências');
+  assert.equal(run('powers', 'aa + bb = 0', [0, 0]), 'a^2 + bb = 0', 'foco no produto');
+  assert.equal(run('powers', 'aa + bb = 0', [0, 1, 0]), 'aa + b^2 = 0', 'foco num fator');
+  assert.equal(run('powers', 'a a b a = 0', [0]), 'a^3b = 0');
+  assert.equal(run('powers', 'a a a = 0', [0, 0], [[0, 0], [0, 1]]), 'a^2a = 0', 'só os selecionados');
+  assert.equal(run('powers', 'ab = 0', [0]), null);
+  assert.equal(run('powers', 'x^2 x = 0', [0]), 'x^3 = 0', 'com expoente: soma os expoentes');
 });
 
 test('juntar termos semelhantes', () => {
