@@ -345,6 +345,11 @@ test('trocar os sinais: A(B + C) → −A(−B − C)', () => {
   assert.equal(run('flipsigns', '(b + c)x = 0', [0]), '-(-b - c)x = 0', 'soma como primeiro fator');
   assert.equal(run('flipsigns', 'b + c = 0', [0]), '-(-b - c) = 0', 'soma sozinha');
   assert.equal(run('flipsigns', 'a b = 0', [0]), null, 'sem soma');
+  assert.equal(run('flipsigns', 'a - (b + c) = 0', [0, 1]), 'a + (-b - c) = 0', 'o sinal entra');
+  assert.equal(run('flipsigns', 'a - (b + c) = 0', [0, 1, 0]), 'a + (-b - c) = 0', 'foco nos parênteses');
+  assert.equal(run('flipsigns', 'a + (-b - c) = 0', [0, 1]), 'a - (b + c) = 0', 'o sinal sai');
+  assert.equal(run('flipsigns', 'y = -(b - c)', [1]), 'y = -b + c', 'fora de uma soma');
+  assert.equal(run('flipsigns', 'a - 2(b + c) = 0', [0, 1]), 'a + 2(-b - c) = 0', 'produto');
   // a mesma tecla "-" em sistemas continua subtraindo equações
   const subeq = RULES.find((r) => r.id === 'subeq');
   const tree = parseAscii('x + y = 3; x - y = 1');
