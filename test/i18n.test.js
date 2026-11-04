@@ -49,7 +49,7 @@ test('grafias brasileiras de funções', () => {
 
 test('teclas das operações: únicas, sem maiúsculas (reservadas aos comandos)', () => {
   // Teclas compartilhadas de propósito, por operações que nunca valem juntas.
-  const SHARED = { '-': ['flipsigns', 'subeq'] };
+  const SHARED = { '-': ['flipsigns', 'subeq'], f: ['logs', 'trig'], n: ['expand', 'name'] };
   const keys = RULES.filter((r) => !SHARED[r.key]).map((r) => r.key);
   assert.equal(new Set(keys).size, keys.length, 'teclas repetidas');
   for (const [k, ids] of Object.entries(SHARED)) {

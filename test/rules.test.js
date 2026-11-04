@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAscii } from '../src/parse-ascii.js';
-import { toAscii } from '../src/serialize.js';
+import { toAscii, toLatex } from '../src/serialize.js';
 import { getAt, findPath } from '../src/ast.js';
 import { RULES, applicable } from '../src/rules/index.js';
 
@@ -337,4 +337,88 @@ test('trocar os sinais: A(B + C) → −A(−B − C)', () => {
   const tree = parseAscii('x + y = 3; x - y = 1');
   assert.equal(RULES.find((r) => r.id === 'flipsigns').run({ tree, focus: [1], targets: [[0], [1]] }), null);
   assert.ok(subeq.run({ tree, focus: [1], targets: [[0], [1]] }).tree);
+});
+
+test('inversos: regra de sinais e fatoração de números', () => {
+  assert.deepEqual(forms('signs', 'y = -a b', [1]), ['y = (-a)b', 'y = a(-b)']);
+  assert.deepEqual(forms('signs', 'y = -(a/b)', [1]), ['y = (-a)/b', 'y = a/(-b)']);
+  assert.equal(run('signs', 'y = (-a)b', [1]), 'y = -ab', 'e volta');
+  assert.equal(run('calc', 'y = 12', [1]), 'y = 2^2*3');
+  assert.equal(run('calc', 'y = 6x', [1, 0]), 'y = 2*3x', 'dentro do produto');
+  assert.equal(run('calc', 'y = 7', [1]), null, 'primo');
+  assert.equal(run('calc', 'y = 2 + 3', [1]), 'y = 5', 'calcular continua primeiro');
+});
+
+test('logaritmos e exponenciais', () => {
+  assert.equal(run('logs', 'y = log(a b)', [1]), 'y = log(a) + log(b)');
+  assert.equal(run('logs', 'y = ln(a/b)', [1]), 'y = ln(a) - ln(b)');
+  assert.equal(run('logs', 'y = log_2(x^3)', [1]), 'y = 3log_2(x)');
+  assert.equal(run('logs', 'y = ln(sqrt(x))', [1]), 'y = (1/2)*ln(x)');
+  assert.equal(run('logs', 'y = log(a) + log(b) - log(c)', [1]), 'y = log((ab)/c)');
+  assert.equal(run('logs', 'y = ln(a) + ln(b) + c', [1], [[1, 0], [1, 1]]), 'y = ln(ab) + c');
+  assert.equal(run('logs', 'y = ln(a) + log(b)', [1]), null, 'bases diferentes');
+  assert.equal(run('logs', 'y = 3ln(x)', [1]), 'y = ln(x^3)');
+  assert.equal(run('logs', 'y = log_2(2)', [1]), 'y = 1');
+  assert.equal(run('logs', 'y = ln(e^x)', [1]), 'y = x');
+  assert.equal(run('logs', 'y = log(1)', [1]), 'y = 0');
+  assert.equal(run('logs', 'y = log(10)', [1]), 'y = 1', 'log decimal');
+  assert.equal(run('logs', 'y = e^(ln(x))', [1]), 'y = x');
+  assert.equal(run('logs', 'y = 2^(log_2(x))', [1]), 'y = x');
+  assert.deepEqual(forms('logs', 'y = exp(x)', [1]), ['y = e^x']);
+  assert.equal(run('logs', 'y = ln(a)/ln(b)', [1]), 'y = log_b(a)');
+  assert.ok(forms('logs', 'y = log_2(x)', [1]).includes('y = ln(x)/ln(2)'), 'mudança de base');
+});
+
+test('trigonometria', () => {
+  assert.equal(run('trig', 'y = tan(x)', [1]), 'y = sin(x)/cos(x)');
+  assert.equal(run('trig', 'y = sin(x)/cos(x)', [1]), 'y = tan(x)');
+  assert.equal(run('trig', 'y = 1/cos(x)', [1]), 'y = sec(x)');
+  assert.equal(run('trig', 'y = sin(-x)', [1]), 'y = -sin(x)');
+  assert.equal(run('trig', 'y = -sin(x)', [1]), 'y = sin(-x)');
+  assert.equal(run('trig', 'y = cos(-x)', [1]), 'y = cos(x)');
+  assert.equal(run('trig', 'y = sin^2(x) + cos^2(x)', [1]), 'y = 1');
+  assert.equal(run('trig', 'y = a + sin^2(t) + cos^2(t)', [1]), 'y = a + 1');
+  assert.equal(run('trig', 'y = sin^2(x) + cos^2(t)', [1]), null, 'arcos diferentes');
+  assert.equal(run('trig', 'y = 1 - cos^2(x)', [1]), 'y = sin^2(x)');
+  assert.equal(run('trig', 'y = sin^2(x)', [1]), 'y = 1 - cos^2(x)');
+  assert.equal(run('trig', 'y = sin(2x)', [1]), 'y = 2sin(x)*cos(x)');
+  assert.deepEqual(forms('trig', 'y = cos(2x)', [1]), ['y = cos^2(x) - sin^2(x)', 'y = 2cos^2(x) - 1', 'y = 1 - 2sin^2(x)']);
+  assert.equal(run('trig', 'y = 2sin(x)cos(x)', [1]), 'y = sin(2x)');
+  assert.equal(run('trig', 'y = cos^2(x) - sin^2(x)', [1]), 'y = cos(2x)');
+  assert.equal(run('trig', 'y = 1 - 2sin^2(x)', [1]), 'y = cos(2x)');
+  assert.equal(run('trig', 'y = sin(a + b)', [1]), 'y = sin(a)*cos(b) + cos(a)*sin(b)');
+  assert.equal(run('trig', 'y = cos(a - b)', [1]), 'y = cos(a)*cos(b) + sin(a)*sin(b)');
+  assert.equal(run('trig', 'y = sin(a)cos(b) - cos(a)sin(b)', [1]), 'y = sin(a - b)');
+  assert.equal(run('trig', 'y = cos(a)cos(b) - sin(a)sin(b)', [1]), 'y = cos(a + b)');
+});
+
+test('radicais', () => {
+  assert.equal(run('powers', 'y = sqrt(2)sqrt(3)', [1]), 'y = sqrt(2*3)');
+  assert.equal(run('powers', 'y = sqrt(a b)', [1]), 'y = sqrt(a)*sqrt(b)');
+  assert.equal(run('powers', 'y = sqrt(a/b)', [1]), 'y = sqrt(a)/sqrt(b)');
+  assert.equal(run('powers', 'y = sqrt(a)/sqrt(b)', [1]), 'y = sqrt(a/b)');
+  assert.equal(run('powers', 'y = sqrt(x)^2', [1]), 'y = x');
+  assert.equal(run('powers', 'y = sqrt(x^2)', [1]), 'y = abs(x)');
+  assert.equal(run('powers', 'y = sqrt(3^2)', [1]), 'y = 3');
+  assert.equal(run('powers', 'y = sqrt(9)', [1]), 'y = 3');
+  assert.equal(run('powers', 'y = sqrt(8)', [1]), 'y = 8^(1/2)', '8 não é quadrado');
+  assert.equal(run('powers', 'y = sqrt(x)', [1]), 'y = x^(1/2)');
+  assert.equal(run('powers', 'y = x^(1/2)', [1]), 'y = sqrt(x)');
+  assert.equal(run('powers', 'y = x^(1/3)', [1]), 'y = root(x, 3)');
+  assert.deepEqual(forms('powers', 'y = sqrt(2)sqrt(2)', [1]), ['y = sqrt(2)^2', 'y = sqrt(2*2)']);
+});
+
+test('racionalizar: sugestão do fator', () => {
+  const ex = rule('expandfrac');
+  const sug = (src, focus) => ex.suggest({ tree: parseAscii(src), focus, targets: [focus] });
+  assert.equal(sug('y = 1/sqrt(2)', [1]), 'sqrt(2)');
+  assert.equal(sug('y = 1/(1 + sqrt(2))', [1]), '1 - sqrt(2)');
+  assert.equal(sug('y = 1/(3 - sqrt(x))', [1]), '3 + sqrt(x)');
+  assert.equal(sug('y = 1/x', [1]), '');
+});
+
+test('notação: log com base e sen²x', () => {
+  assert.equal(toAscii(parseAscii('y = log_2 x + sin^2 x')), 'y = log_2(x) + sin^2(x)');
+  assert.equal(toAscii(parseAscii('y = log(x, 10)')), 'y = log_10(x)');
+  assert.equal(toLatex(parseAscii('y = log_2(x) + cos^2(2x)')), 'y = \\log_{2} x + \\cos^{2}\\left(2 x\\right)');
 });

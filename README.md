@@ -11,9 +11,9 @@ uma escolha explícita, com animação, e fica registrado no histórico.
 
 ## Recursos
 
-- Entrada em ASCII (`2x + 3 = 7`, `sqrt(x)`, `x^(n+1)`) ou LaTeX (`\frac{1}{2}`, `\sqrt[3]{x}`), com teclado matemático na tela.
+- Entrada em ASCII (`2x + 3 = 7`, `sqrt(x)`, `x^(n+1)`, `log_2 x`, `sin^2 x`) ou LaTeX (`\frac{1}{2}`, `\sqrt[3]{x}`, `\log_2 x`, `\sin^2 x`), com teclado matemático na tela.
 - Navegação e seleção pelo teclado; movimento de termos com animação (o termo "pula" o sinal de igual).
-- Menu de operações contextuais agrupado por assunto, com busca: calcular, distribuir, pôr em evidência, cancelar, termos semelhantes, frações, potências, binômio de Newton, produtos notáveis, somar e subtrair (completar quadrados), substituir, operar nos dois lados.
+- Menu de operações contextuais agrupado por assunto, com busca: calcular, distribuir, pôr em evidência, cancelar, termos semelhantes, frações, potências, binômio de Newton, produtos notáveis, radicais e racionalização, logaritmos e exponenciais, identidades trigonométricas, somar e subtrair (completar quadrados), substituir, operar nos dois lados.
 - Inequações (o sentido inverte ao multiplicar por negativo; multiplicar por letra é recusado) e a operação "Estimar" (`A = B → A ≤ C`).
 - Números complexos: aritmética exata, conjugado, `z·z̄ ↔ |z|²`, `z ± z̄ ↔ 2Re(z) / 2i·Im(z)`, multiplicar pelo conjugado.
 - Sistemas de equações: somar e subtrair equações, substituir uma variável nas outras.
@@ -45,16 +45,17 @@ e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atal
 | PgUp PgDn Home End | percorrer os passos |
 
 **Operações:**
-`c` calcular · `l` termos semelhantes · `x` cancelar (opostos; fatores iguais selecionados em cima e embaixo, mesmo em frações diferentes de um produto) · `0` elemento neutro · `r` regra de sinais · `-` trocar os sinais (A(B + C) → −A(−B − C)) ·
+`c` calcular ↔ fatorar o número (12 ↔ 2²·3) · `l` termos semelhantes · `x` cancelar (opostos; fatores iguais selecionados em cima e embaixo, mesmo em frações diferentes de um produto) · `0` elemento neutro · `r` regra de sinais ↔ sinal num fator (−ab ↔ (−a)b) · `-` trocar os sinais (A(B + C) → −A(−B − C)) ·
 `d` distribuir · `e` pôr em evidência · `(` pôr entre parênteses · `p` remover parênteses · `g` agrupar ·
 `q` somar e subtrair… · `s` substituir… ·
 `j` frações: a/c + b/c ↔ (a + b)/c e (a/b)(c/d) ↔ ac/(bd) (com seleção: (ab)/(cd), a e c marcados → (a/c)(b/d)) ·
-`*` multiplicar em cima e embaixo… ·
-`^` potências: aa ↔ a², xᵃxᵇ ↔ x^(a+b), aⁿbⁿ ↔ (ab)ⁿ, (xᵃ)ᵇ ↔ x^(ab), xⁿ → x·x·…·x (expoentes numéricos já calculados) ·
+`*` multiplicar em cima e embaixo… (sugere o fator que racionaliza: √2, 1 − √2) ·
+`^` potências e raízes: aa ↔ a², xᵃxᵇ ↔ x^(a+b), aⁿbⁿ ↔ (ab)ⁿ, (xᵃ)ᵇ ↔ x^(ab), xⁿ → x·x·…·x (expoentes numéricos já calculados), √a√b ↔ √(ab), √(a/b) ↔ √a/√b, (√a)² → a, √(a²) → |a|, √x ↔ x^(1/2) ·
+`f` funções: log(ab) ↔ log a + log b, log(a/b) ↔ log a − log b, log aⁿ ↔ n log a, ln eˣ → x, e^(ln x) → x, logₐ a → 1, mudança de base; sen² + cos² = 1, tg = sen/cos, paridade, arco duplo e soma de arcos (nos dois sentidos) ·
 `b` binômio/multinômio ↔ produto notável ·
 `z` conjugado · `~` z ↔ z̄̄ · `h` z·z̄ ↔ |z|² · `v` z ± z̄ · `y` multiplicar pelo conjugado ·
 `=` operar nos dois lados… · `t` trocar os lados · `i` estimar… · `+` `-` somar/subtrair equações (duas selecionadas) ·
-`>` substituir a variável isolada · `n` dar nome… · `k` expandir nome · `w` abrir área de trabalho
+`>` substituir a variável isolada · `n` dar nome… / expandir o nome (num nome) · `w` abrir área de trabalho
 
 Teclas de equivalência (`j`, `^`, `b`, …) funcionam nos dois sentidos: o app escolhe pela forma do que está em foco.
 Quando há mais de uma forma possível, a tecla aplica a primeira e, repetida logo em seguida, troca o passo pela próxima.
