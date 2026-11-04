@@ -209,7 +209,7 @@ test('binômio de Newton e multinomial, sem simplificar as bases', () => {
   assert.equal(run('binomial', '(a + b + c)^2 = 0', [0]), 'a^2 + 2ab + 2ac + b^2 + 2bc + c^2 = 0');
   assert.equal(run('binomial', 'y + (a + b)^2 = 0', [0, 1]), 'y + a^2 + 2ab + b^2 = 0');
   assert.equal(run('binomial', '3(a + b)^2 = 0', [0, 1]), '3(a^2 + 2ab + b^2) = 0');
-  assert.equal(run('binomial', '(a + b)^n = 0', [0]), null);
+  assert.equal(run('binomial', '(a + b)^n = 0', [0]), 'sum_(k=0)^n binom(n, k)a^(n - k)b^k = 0', 'expoente simbólico: Σ');
   assert.equal(run('binomial', 'x^2 = 0', [0]), null);
 });
 
@@ -449,4 +449,59 @@ test('zero: 0·x → 0, 0/x → 0, x⁰ → 1', () => {
   assert.equal(run('neutral', 'y = x^0', [1]), 'y = 1');
   assert.equal(run('neutral', 'y = 0^0', [1]), null);
   assert.equal(run('neutral', 'y = 1x', [1]), 'y = x', 'neutro continua');
+});
+
+test('combinatória: fatorial e número binomial', () => {
+  assert.deepEqual(forms('factorial', 'y = n!', [1]), ['y = n(n - 1)!', 'y = prod_(k=1)^n k']);
+  assert.deepEqual(forms('factorial', 'y = 5!', [1]), ['y = 5*4*3*2*1', 'y = 5*4!']);
+  assert.equal(run('factorial', 'y = (n + 1)!', [1]), 'y = (n + 1)n!');
+  assert.equal(run('factorial', 'y = (n + 1) n!', [1]), 'y = (n + 1)!');
+  assert.equal(run('factorial', 'y = 5*4*3*2*1', [1]), 'y = 5!');
+  assert.deepEqual(forms('factorial', 'y = binom(n, k)', [1]), [
+    'y = n!/(k!(n - k)!)', 'y = binom(n, n - k)', 'y = binom(n - 1, k - 1) + binom(n - 1, k)',
+  ]);
+  assert.equal(run('factorial', 'y = binom(n, n - k)', [1, 1]), 'y = n!/((n - k)!k!)');
+  assert.equal(forms('factorial', 'y = binom(n, n - k)', [1])[1], 'y = binom(n, k)', 'simetria volta');
+  assert.equal(run('factorial', 'y = binom(n, 0)', [1]), 'y = 1');
+  assert.equal(run('factorial', 'y = binom(n, 1)', [1]), 'y = n');
+  assert.equal(run('factorial', 'y = n!/(k! (n - k)!)', [1]), 'y = binom(n, k)');
+  assert.equal(run('factorial', 'y = 5!/(2! 3!)', [1]), 'y = binom(5, 2)');
+  assert.equal(run('factorial', 'y = binom(n, k) + binom(n, k + 1)', [1]), 'y = binom(n + 1, k + 1)');
+  assert.equal(run('calc', 'y = binom(6, 3) + 4!', [1]), 'y = 44');
+});
+
+test('somatório e produtório', () => {
+  assert.deepEqual(forms('sums', 'S = sum_(k=1)^4 k^2', [1]).slice(0, 2), ['S = 1^2 + 2^2 + 3^2 + 4^2', 'S = (4*5*9)/6']);
+  assert.equal(run('sums', 'S = sum_(k=1)^n (2k + 1)', [1]), 'S = sum_(k=1)^n 2k + sum_(k=1)^n 1');
+  assert.equal(run('sums', 'S = sum_(k=1)^n 3k', [1, 3]), 'S = 3sum_(k=1)^n k', 'foco no termo');
+  assert.equal(run('sums', 'S = sum_(k=1)^n 5', [1]), 'S = n*5');
+  assert.equal(run('sums', 'S = sum_(k=1)^n k', [1]), 'S = (n(n + 1))/2');
+  assert.equal(run('sums', 'S = sum_(k=0)^n 2^k', [1]), 'S = (2^(n + 1) - 1)/(2 - 1)');
+  assert.equal(run('sums', 'S = sum_(k=0)^n binom(n, k)', [1]), 'S = 2^n');
+  assert.equal(run('sums', 'S = sum_(k=1)^n (1/k - 1/(k + 1))', [1]), 'S = 1/1 - 1/(n + 1)');
+  const f = forms('sums', 'S = sum_(k=1)^n (k + 1)', [1]);
+  assert.ok(f.includes('S = sum_(k=1)^(n - 1) (k + 1) + (n + 1)'), 'último termo');
+  assert.ok(f.includes('S = (1 + 1) + sum_(k=2)^n (k + 1)'), 'primeiro termo');
+  assert.ok(f.includes('S = sum_(k=0)^(n - 1) ((k + 1) + 1)'), 'deslocar o índice');
+  // inversos
+  assert.equal(run('sums', 'S = sum_(k=1)^n k + sum_(k=1)^n k^2', [1]), 'S = sum_(k=1)^n (k + k^2)');
+  assert.equal(run('sums', 'S = sum_(k=1)^n k - sum_(k=1)^n 1', [1]), 'S = sum_(k=1)^n (k - 1)');
+  assert.equal(run('sums', 'S = sum_(k=1)^(n - 1) k^2 + n^2', [1]), 'S = sum_(k=1)^n k^2');
+  assert.equal(run('sums', 'S = sum_(k=1)^m k + sum_(k=m+1)^n k', [1]), 'S = sum_(k=1)^n k');
+  assert.equal(run('sums', 'S = 2 sum_(k=1)^n k', [1]), 'S = sum_(k=1)^n 2k');
+  // produtório
+  assert.equal(run('sums', 'P = prod_(k=1)^n k', [1]), 'P = n!');
+  assert.equal(run('sums', 'P = prod_(k=1)^n 2k', [1]), 'P = 2^nprod_(k=1)^n k');
+  assert.equal(run('calc', 'S = sum_(k=1)^4 k^2', [1]), 'S = 30');
+  // binômio de Newton nos dois sentidos
+  assert.equal(run('binomial', 'y = (a + b)^n', [1]), 'y = sum_(k=0)^n binom(n, k)a^(n - k)b^k');
+  assert.equal(run('binomial', 'y = sum_(k=0)^n binom(n, k) a^(n - k) b^k', [1]), 'y = (a + b)^n');
+});
+
+test('notação de somatório, binomial e fatorial', () => {
+  for (const s of ['sum_(k=1)^n k^2 + 1', 'prod_(k=1)^(n + 1) (2k + 1)', 'binom(n, k)', '(n + 1)!', '(n!)^2', 'x/(sum_(k=1)^n k)']) {
+    assert.equal(toAscii(parseAscii(s)), s);
+  }
+  assert.equal(toLatex(parseAscii('sum_(k=1)^n binom(n, k) + (n+1)!')), '\\sum_{k=1}^{n} \\binom{n}{k} + \\left(n + 1\\right)!');
+  assert.equal(toAscii(parseAscii('(sum_(k=1)^n k) x')), '(sum_(k=1)^n k)x', 'Σ no meio do produto');
 });

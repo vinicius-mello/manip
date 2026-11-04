@@ -11,9 +11,9 @@ uma escolha explícita, com animação, e fica registrado no histórico.
 
 ## Recursos
 
-- Entrada em ASCII (`2x + 3 = 7`, `sqrt(x)`, `x^(n+1)`, `log_2 x`, `sin^2 x`) ou LaTeX (`\frac{1}{2}`, `\sqrt[3]{x}`, `\log_2 x`, `\sin^2 x`), com teclado matemático na tela.
+- Entrada em ASCII (`2x + 3 = 7`, `sqrt(x)`, `x^(n+1)`, `log_2 x`, `sin^2 x`, `n!`, `binom(n, k)`, `sum_(k=1)^n k^2`, `prod_(k=1)^n k`) ou LaTeX (`\frac{1}{2}`, `\sqrt[3]{x}`, `\log_2 x`, `\sin^2 x`, `\binom{n}{k}`, `\sum_{k=1}^{n}`), com teclado matemático na tela.
 - Navegação e seleção pelo teclado; movimento de termos com animação (o termo "pula" o sinal de igual).
-- Menu de operações contextuais agrupado por assunto, com busca: calcular, distribuir, pôr em evidência, cancelar, termos semelhantes, frações, potências, binômio de Newton, produtos notáveis, radicais e racionalização, logaritmos e exponenciais, identidades trigonométricas, somar e subtrair (completar quadrados), substituir, operar nos dois lados.
+- Menu de operações contextuais agrupado por assunto, com busca: calcular, distribuir, pôr em evidência, cancelar, termos semelhantes, frações, potências, binômio de Newton, produtos notáveis, radicais e racionalização, logaritmos e exponenciais, identidades trigonométricas, fatorial e número binomial, somatórios e produtórios, somar e subtrair (completar quadrados), substituir, operar nos dois lados.
 - Inequações (o sentido inverte ao multiplicar por negativo; multiplicar por letra é recusado) e a operação "Estimar" (`A = B → A ≤ C`).
 - Números complexos: aritmética exata, conjugado, `z·z̄ ↔ |z|²`, `z ± z̄ ↔ 2Re(z) / 2i·Im(z)`, multiplicar pelo conjugado.
 - Sistemas de equações: somar e subtrair equações, substituir uma variável nas outras.
@@ -52,7 +52,9 @@ e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atal
 `*` multiplicar em cima e embaixo… (sugere o fator que racionaliza: √2, 1 − √2) ·
 `^` potências e raízes: aa ↔ a², xᵃxᵇ ↔ x^(a+b), aⁿbⁿ ↔ (ab)ⁿ, (xᵃ)ᵇ ↔ x^(ab), xⁿ → x·x·…·x (expoentes numéricos já calculados), √a√b ↔ √(ab), √(a/b) ↔ √a/√b, (√a)² → a, √(a²) → |a|, √x ↔ x^(1/2) ·
 `f` funções: log(ab) ↔ log a + log b, log(a/b) ↔ log a − log b, log aⁿ ↔ n log a, ln eˣ → x, e^(ln x) → x, logₐ a → 1, mudança de base; sen² + cos² = 1, tg = sen/cos, paridade, arco duplo e soma de arcos (nos dois sentidos) ·
-`b` binômio/multinômio ↔ produto notável ·
+`b` binômio/multinômio ↔ produto notável; (a + b)ⁿ ↔ Σ C(n, k) aⁿ⁻ᵏ bᵏ ·
+`!` fatorial e binomial: n! ↔ n·(n − 1)!, 5! ↔ 5·4·3·2·1, n! → Π k, C(n, k) ↔ n!/(k!(n − k)!), simetria C(n, k) ↔ C(n, n − k), Stifel C(n − 1, k − 1) + C(n − 1, k) ↔ C(n, k), C(n, 0) = C(n, n) = 1 ·
+`m` somatório e produtório: escrever os termos, fórmulas (Σk, Σk², Σk³, PG, ΣC(n, k) = 2ⁿ, Πk = n!), termo constante, constante para fora ↔ para dentro, Σ(f + g) ↔ Σf + Σg, telescópica, separar o último/primeiro termo ↔ incluir, juntar intervalos, deslocar o índice (`c` calcula com limites numéricos) ·
 `z` conjugado · `~` z ↔ z̄̄ · `h` z·z̄ ↔ |z|² · `v` z ± z̄ · `y` multiplicar pelo conjugado ·
 `=` operar nos dois lados… · `t` trocar os lados · `i` estimar… · `+` `-` somar/subtrair equações (duas selecionadas) ·
 `>` substituir a variável isolada · `n` dar nome… / expandir o nome (num nome) · `w` abrir área de trabalho
