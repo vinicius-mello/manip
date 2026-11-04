@@ -62,6 +62,7 @@ e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atal
 Teclas de equivalência (`j`, `^`, `b`, …) funcionam nos dois sentidos: o app escolhe pela forma do que está em foco.
 Quando há mais de uma forma possível, a tecla aplica a primeira e, repetida logo em seguida, troca o passo pela próxima.
 No menu (Enter), cada forma aparece como um item.
+Nas teclas `!`, `m` e `b`, o padrão é reconhecido também quando escrito de outro jeito equivalente (`(n − k)·(−1 − k + n)!` → `(n − k)!`); nesse caso o passo mostra a igualdade usada ("usando −1 − k + n = n − k − 1"), e o professor decide se reorganiza antes.
 
 **Comandos:**
 `C` cor · `E` editar · `Y` copiar a expressão (texto) · `L` copiar LaTeX · `P` apresentação · `K` teclado na tela · `O` nota do passo ·

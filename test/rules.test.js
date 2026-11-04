@@ -4,6 +4,7 @@ import { parseAscii } from '../src/parse-ascii.js';
 import { toAscii, toLatex } from '../src/serialize.js';
 import { getAt, findPath } from '../src/ast.js';
 import { RULES, applicable } from '../src/rules/index.js';
+import { fmt } from '../src/i18n.js';
 
 const rule = (id) => RULES.find((r) => r.id === id);
 
@@ -461,6 +462,18 @@ test('combinatória: fatorial e número binomial', () => {
   assert.equal(run('factorial', 'y = (n + 1) n!', [1]), 'y = (n + 1)!');
   assert.equal(run('factorial', 'y = 5*4*3*2*1', [1]), 'y = 5!');
   assert.equal(run('factorial', 'y = ((n+1)-(k+1))*(((n+1)-(k+1))-1)!', [1]), 'y = ((n + 1) - (k + 1))!', 'agrupamento diferente');
+  // forma normal: reconhece e anota a igualdade usada
+  const label = (id, src, focus) => {
+    const tree = parseAscii(src);
+    const r = rule(id).run({ tree, focus, targets: [focus] });
+    return r?.label && fmt(r.label);
+  };
+  assert.equal(run('factorial', 'y = (n - k)(-1 - k + n)!', [1]), 'y = (n - k)!');
+  assert.equal(label('factorial', 'y = (n - k)(-1 - k + n)!', [1]), 'juntou em fatorial, usando −1 − k + n = n − k − 1');
+  assert.equal(label('factorial', 'y = (n - k)(n - k - 1)!', [1]), 'juntou em fatorial', 'literal: sem nota');
+  assert.equal(run('factorial', 'y = n!/((n - k)! k!)', [1]), 'y = binom(n, k)');
+  assert.equal(run('factorial', 'y = binom(n, k) + binom(n, 1 + k)', [1]), 'y = binom(n + 1, 1 + k)');
+  assert.equal(label('sums', 'S = sum_(k=1)^m k + sum_(k=1+m)^n k', [1]), 'juntou os intervalos, usando 1 + m = m + 1');
   assert.equal(run('factorial', 'y = binom(n + 1, k + 1)', [1]), 'y = (n + 1)!/((k + 1)!((n + 1) - (k + 1))!)');
   assert.deepEqual(forms('factorial', 'y = binom(n, k)', [1]), [
     'y = n!/(k!(n - k)!)', 'y = binom(n, n - k)', 'y = binom(n - 1, k - 1) + binom(n - 1, k)',
