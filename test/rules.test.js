@@ -439,3 +439,14 @@ test('juntar frações vem antes de separar', () => {
   assert.equal(run('join', 'a/(b c) + d/(c b) = 0', [0, 0, 0], [[0, 0, 0], [0, 0, 1, 0]]), '(a/b)(1/c) + d/(cb) = 0', 'dentro da fração: separa');
   assert.equal(rule('join').run({ tree: parseAscii('a/b + d/c = 0'), focus: [0], targets: [[0]] }).error, 'err.denoms');
 });
+
+test('zero: 0·x → 0, 0/x → 0, x⁰ → 1', () => {
+  assert.equal(run('neutral', 'y = 0x', [1]), 'y = 0');
+  assert.equal(run('neutral', 'y = 3 + 0*x*z', [1, 1]), 'y = 3 + 0');
+  assert.equal(run('neutral', 'y = 1*0*x', [1]), 'y = 0', 'zero antes do neutro');
+  assert.equal(run('neutral', 'y = 0/(x + 1)', [1]), 'y = 0');
+  assert.equal(run('neutral', 'y = 0/0', [1]), null);
+  assert.equal(run('neutral', 'y = x^0', [1]), 'y = 1');
+  assert.equal(run('neutral', 'y = 0^0', [1]), null);
+  assert.equal(run('neutral', 'y = 1x', [1]), 'y = x', 'neutro continua');
+});
