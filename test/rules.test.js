@@ -54,6 +54,13 @@ test('cancelar termos opostos e fatores', () => {
   assert.equal(run('cancel', 'x = (2y)/(2z)', [1, 0, 0]), 'x = y/z');
   assert.equal(run('cancel', 'x = (2y)/2', [1, 1]), 'x = y/1');
   assert.equal(run('cancel', 'x + 3 = 5', [0, 1]), null);
+  // fatores selecionados em cima e embaixo, inclusive em frações diferentes
+  assert.equal(run('cancel', 'x = (2y)/(2z)', [1, 1, 0], [[1, 0, 0], [1, 1, 0]]), 'x = y/z');
+  assert.equal(run('cancel', 'x = (a/b)(b/c)', [1, 1, 0, 0], [[1, 0, 0, 1], [1, 1, 0, 0]]), 'x = (a/1)(1/c)');
+  assert.equal(run('cancel', 'x = 2(y/2)', [1, 0], [[1, 0], [1, 1, 0, 1]]), 'x = (y/1)', 'fator solto');
+  assert.equal(run('cancel', 'x = (-a b)/(b c)', [1, 0, 0, 1], [[1, 0, 0, 1], [1, 1, 0]]), 'x = (-a)/c', 'numerador com sinal');
+  assert.equal(run('cancel', 'x = (a/b)(c/d)', [1, 0, 0, 0], [[1, 0, 0, 0], [1, 1, 0, 1]]), null, 'diferentes');
+  assert.equal(run('cancel', 'x = (a/b) + (b/c)', [1, 0, 0, 1], [[1, 0, 0, 1], [1, 1, 0, 0]]), null, 'soma: não');
 });
 
 test('elemento neutro, parênteses e sinais', () => {
@@ -76,6 +83,13 @@ test('agrupar, frações e potências', () => {
   assert.equal(run('join', 'x/2 - y/2 = 1', [0]), '(x - y)/2 = 1');
   assert.equal(run('join', 'x/2 + y/3 = 1', [0]), null);
   assert.equal(run('split', '(x + y)/2 = 1', [0]), 'x/2 + y/2 = 1');
+  // produto de frações
+  assert.equal(run('join', '(a/b)(c/d) = 1', [0]), '(ac)/(bd) = 1');
+  assert.equal(run('join', '(a/b)(c/d) = 1', [0, 1]), '(ac)/(bd) = 1', 'foco num fator');
+  assert.equal(run('join', '2(x/3) = 1', [0]), '(2x)/3 = 1', 'fator solto vai para o numerador');
+  assert.equal(run('join', 'y(a/b)(c/d) = 1', [0, 1], [[0, 1], [0, 2]]), 'y((ac)/(bd)) = 1', 'só os selecionados');
+  assert.equal(run('join', '((x + 1)/2)((x - 1)/3) = 1', [0]), '((x + 1)(x - 1))/(2*3) = 1');
+  assert.equal(run('join', 'a b = 1', [0]), null);
   assert.equal(run('powers', 'x^2 x^3 = 1', [0, 0]), 'x^5 = 1');
   assert.equal(run('powers', 'x^2 x = 1', [0]), 'x^3 = 1', 'foco no produto');
   assert.equal(run('powers', 'x^5/x^2 = 1', [0]), 'x^3 = 1');
