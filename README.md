@@ -62,7 +62,7 @@ Quando há mais de uma forma possível, a tecla aplica a primeira e, repetida lo
 No menu (Enter), cada forma aparece como um item.
 
 **Comandos:**
-`C` cor · `E` editar · `L` copiar LaTeX · `P` apresentação · `K` teclado na tela · `O` nota do passo ·
+`C` cor · `E` editar · `Y` copiar a expressão (texto) · `L` copiar LaTeX · `P` apresentação · `K` teclado na tela · `O` nota do passo ·
 `R` gravar vídeo · `[` `]` `\` tamanho da fórmula · `?` atalhos
 
 ## Desenvolvimento

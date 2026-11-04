@@ -11,7 +11,7 @@ const rule = (id) => RULES.find((r) => r.id === id);
 function run(id, src, focus, sel = [], input) {
   const tree = parseAscii(src);
   const r = rule(id).run({ tree, focus, targets: sel.length ? sel : [focus], input });
-  return r && toAscii(r.tree);
+  return r?.tree ? toAscii(r.tree) : null;
 }
 
 // Todas as formas de uma equivalência, na ordem.
@@ -421,4 +421,21 @@ test('notação: log com base e sen²x', () => {
   assert.equal(toAscii(parseAscii('y = log_2 x + sin^2 x')), 'y = log_2(x) + sin^2(x)');
   assert.equal(toAscii(parseAscii('y = log(x, 10)')), 'y = log_10(x)');
   assert.equal(toLatex(parseAscii('y = log_2(x) + cos^2(2x)')), 'y = \\log_{2} x + \\cos^{2}\\left(2 x\\right)');
+});
+
+test('juntar frações vem antes de separar', () => {
+  const src = '(x^2+x*y)/((x^2+y^2)*(x+y))+(-x*y+y^2)/((x^2+y^2)*(x+y)) = 0';
+  const joined = '((x^2 + xy) + (-xy + y^2))/((x^2 + y^2)(x + y)) = 0';
+  assert.equal(run('join', src, [0]), joined, 'foco na soma');
+  assert.equal(run('join', src, [0, 0]), joined, 'foco numa das frações');
+  assert.equal(run('join', src, [0, 0, 0]), joined, 'foco no numerador');
+  assert.equal(run('join', src, [0, 0], [[0, 0], [0, 1]]), joined, 'as duas selecionadas');
+  assert.equal(forms('join', src, [0, 0], [[0, 0], [0, 1]]).length, 1, 'seleção: só juntar');
+  assert.equal(run('join', 'a/((b)(c)) + d/(((b)(c))) = 0', [0]), '(a + d)/((b)(c)) = 0', 'parênteses a mais');
+  const r = rule('join').run({ tree: parseAscii('a/(b c) + d/(c b) = 0'), focus: [0], targets: [[0]] });
+  assert.equal(r.error, 'err.denomOrder', 'ordem dos fatores');
+  const onTerm = rule('join').run({ tree: parseAscii('a/(b c) + d/(c b) = 0'), focus: [0, 0], targets: [[0, 0]] });
+  assert.equal(onTerm.error, 'err.denomOrder', 'foco numa parcela: explica, não separa');
+  assert.equal(run('join', 'a/(b c) + d/(c b) = 0', [0, 0, 0], [[0, 0, 0], [0, 0, 1, 0]]), '(a/b)(1/c) + d/(cb) = 0', 'dentro da fração: separa');
+  assert.equal(rule('join').run({ tree: parseAscii('a/b + d/c = 0'), focus: [0], targets: [[0]] }).error, 'err.denoms');
 });
