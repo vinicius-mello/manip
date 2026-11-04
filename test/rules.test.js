@@ -460,6 +460,8 @@ test('combinatória: fatorial e número binomial', () => {
   assert.equal(run('factorial', 'y = (n + 1)!', [1]), 'y = (n + 1)n!');
   assert.equal(run('factorial', 'y = (n + 1) n!', [1]), 'y = (n + 1)!');
   assert.equal(run('factorial', 'y = 5*4*3*2*1', [1]), 'y = 5!');
+  assert.equal(run('factorial', 'y = ((n+1)-(k+1))*(((n+1)-(k+1))-1)!', [1]), 'y = ((n + 1) - (k + 1))!', 'agrupamento diferente');
+  assert.equal(run('factorial', 'y = binom(n + 1, k + 1)', [1]), 'y = (n + 1)!/((k + 1)!((n + 1) - (k + 1))!)');
   assert.deepEqual(forms('factorial', 'y = binom(n, k)', [1]), [
     'y = n!/(k!(n - k)!)', 'y = binom(n, n - k)', 'y = binom(n - 1, k - 1) + binom(n - 1, k)',
   ]);
