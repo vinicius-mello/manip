@@ -14,6 +14,38 @@ function run(id, src, focus, sel = [], input) {
   return r && toAscii(r.tree);
 }
 
+// Todas as formas de uma equivalência, na ordem.
+function forms(id, src, focus, sel = []) {
+  const tree = parseAscii(src);
+  return rule(id).all({ tree, focus, targets: sel.length ? sel : [focus] }).filter((r) => r.tree).map((r) => toAscii(r.tree));
+}
+
+test('equivalências nos dois sentidos', () => {
+  // frações: produto ↔ separado
+  assert.equal(run('join', '(a b)/(c d) = 1', [0], [[0, 0, 0], [0, 1, 0]]), '(a/c)(b/d) = 1', 'a e c selecionados');
+  assert.equal(run('join', '(a b)/(c d) = 1', [0]), '(a/c)(b/d) = 1', 'pela posição');
+  assert.equal(run('join', '(2x)/3 = 1', [0, 0, 0]), '2(x/3) = 1', 'só o 2: sai da fração');
+  assert.equal(run('join', '(2x)/3 = 1', [0]), '(2/3)x = 1', 'pela posição');
+  assert.equal(run('join', '(a b c)/(d e) = 1', [0]), '(a/d)(b/e)c = 1');
+  assert.equal(run('join', 'a/(c d) = 1', [0]), '(a/c)(1/d) = 1');
+  assert.equal(run('join', 'a/b = 1', [0]), null);
+  // multiplicar em cima e embaixo
+  assert.equal(run('expandfrac', 'x = 1/2', [1], [], '3'), 'x = (1*3)/(2*3)');
+  assert.equal(run('expandfrac', 'x = (a b)/(x + 1)', [1, 0, 0], [], 'x - 1'), 'x = (ab(x - 1))/((x + 1)(x - 1))');
+  // potências: aⁿbⁿ ↔ (ab)ⁿ
+  assert.equal(run('powers', 'a^2 b^2 = 1', [0]), '(ab)^2 = 1');
+  assert.equal(run('powers', 'a^n b^n c = 1', [0, 1]), '(ab)^nc = 1');
+  assert.equal(run('powers', '(a^2)/(b^2) = 1', [0]), '(a/b)^2 = 1');
+  assert.equal(run('powers', '(ab)^n = 1', [0]), 'a^nb^n = 1');
+  assert.equal(run('powers', '(a/b)^2 = 1', [0]), '(a^2)/(b^2) = 1');
+  assert.equal(run('powers', 'x^(a + b) = 1', [0]), 'x^ax^b = 1');
+  assert.equal(run('powers', 'x^(2 + 3) = 1', [0]), 'x^2x^3 = 1');
+  assert.equal(run('powers', 'x^(a b) = 1', [0]), '(x^a)^b = 1');
+  assert.deepEqual(forms('powers', 'x^2 x^2 = 1', [0]), ['x^4 = 1', '(xx)^2 = 1']);
+  // binômio ↔ produto notável
+  assert.equal(run('binomial', '(x + 3)^2 = 0', [0]), 'x^2 + 2x*3 + 3^2 = 0');
+});
+
 test('calcular: subexpressão numérica, sem tocar no resto', () => {
   assert.equal(run('calc', 'x = 7 - 3', [1]), 'x = 4');
   assert.equal(run('calc', 'x = 2*3 + y', [1, 0]), 'x = 6 + y');
@@ -82,7 +114,7 @@ test('agrupar, frações e potências', () => {
   assert.equal(run('join', 'x/2 + y/2 = 1', [0, 0]), '(x + y)/2 = 1');
   assert.equal(run('join', 'x/2 - y/2 = 1', [0]), '(x - y)/2 = 1');
   assert.equal(run('join', 'x/2 + y/3 = 1', [0]), null);
-  assert.equal(run('split', '(x + y)/2 = 1', [0]), 'x/2 + y/2 = 1');
+  assert.equal(run('join', '(x + y)/2 = 1', [0]), 'x/2 + y/2 = 1');
   // produto de frações
   assert.equal(run('join', '(a/b)(c/d) = 1', [0]), '(ac)/(bd) = 1');
   assert.equal(run('join', '(a/b)(c/d) = 1', [0, 1]), '(ac)/(bd) = 1', 'foco num fator');
@@ -192,11 +224,11 @@ test('coeficientes multinomiais', () => {
 });
 
 test('potência como produto', () => {
-  assert.equal(run('asproduct', '(a + b)^2 = 0', [0]), '(a + b)(a + b) = 0');
-  assert.equal(run('asproduct', 'x^3 = 0', [0]), 'xxx = 0');
-  assert.equal(run('asproduct', '(2x)^2 = 0', [0]), '(2x)(2x) = 0');
-  assert.equal(run('asproduct', '2^3 = x', [0]), '2*2*2 = x');
-  assert.equal(run('asproduct', 'x^n = 0', [0]), null);
+  assert.equal(run('powers', '(a + b)^2 = 0', [0]), '(a + b)(a + b) = 0');
+  assert.equal(run('powers', 'x^3 = 0', [0]), 'xxx = 0');
+  assert.deepEqual(forms('powers', '(2x)^2 = 0', [0]), ['2^2x^2 = 0', '(2x)(2x) = 0'], 'duas formas');
+  assert.equal(run('powers', '2^3 = x', [0]), '2*2*2 = x');
+  assert.equal(run('powers', 'x^n = 0', [0]), null);
 });
 
 test('pôr entre parênteses', () => {
@@ -231,16 +263,16 @@ test('juntar termos semelhantes', () => {
 });
 
 test('produtos notáveis no sentido inverso', () => {
-  assert.equal(run('notable', 'x^2 + 6x + 9 = 0', [0]), '(x + 3)^2 = 0');
-  assert.equal(run('notable', 'x^2 - 6x + 9 = 0', [0, 0]), '(x - 3)^2 = 0', 'foco num termo');
-  assert.equal(run('notable', '9 + x^2 + 6x = 0', [0]), '(3 + x)^2 = 0', 'termos em outra ordem');
-  assert.equal(run('notable', '4x^2 + 12xy + 9y^2 = 0', [0]), '(2x + 3y)^2 = 0');
-  assert.equal(run('notable', 'a^2 + 2ba + b^2 = 0', [0]), '(a + b)^2 = 0', 'fatores do meio em outra ordem');
-  assert.equal(run('notable', 'x^2 - 4 = 0', [0]), '(x + 2)(x - 2) = 0');
-  assert.equal(run('notable', '-y^2 + x^4 = 0', [0]), '(x^2 + y)(x^2 - y) = 0');
-  assert.equal(run('notable', 'x^2 + 5x + 9 = 0', [0]), null);
-  assert.equal(run('notable', 'x^2 + 4 = 0', [0]), null, 'soma de quadrados não fatora');
-  assert.equal(run('notable', 'x^2 + 6x + 9 + y = 0', [0, 0], [[0, 0], [0, 1], [0, 2]]), '(x + 3)^2 + y = 0', 'seleção');
+  assert.equal(run('binomial', 'x^2 + 6x + 9 = 0', [0]), '(x + 3)^2 = 0');
+  assert.equal(run('binomial', 'x^2 - 6x + 9 = 0', [0, 0]), '(x - 3)^2 = 0', 'foco num termo');
+  assert.equal(run('binomial', '9 + x^2 + 6x = 0', [0]), '(3 + x)^2 = 0', 'termos em outra ordem');
+  assert.equal(run('binomial', '4x^2 + 12xy + 9y^2 = 0', [0]), '(2x + 3y)^2 = 0');
+  assert.equal(run('binomial', 'a^2 + 2ba + b^2 = 0', [0]), '(a + b)^2 = 0', 'fatores do meio em outra ordem');
+  assert.equal(run('binomial', 'x^2 - 4 = 0', [0]), '(x + 2)(x - 2) = 0');
+  assert.equal(run('binomial', '-y^2 + x^4 = 0', [0]), '(x^2 + y)(x^2 - y) = 0');
+  assert.equal(run('binomial', 'x^2 + 5x + 9 = 0', [0]), null);
+  assert.equal(run('binomial', 'x^2 + 4 = 0', [0]), null, 'soma de quadrados não fatora');
+  assert.equal(run('binomial', 'x^2 + 6x + 9 + y = 0', [0, 0], [[0, 0], [0, 1], [0, 2]]), '(x + 3)^2 + y = 0', 'seleção');
 });
 
 test('sugestão para completar quadrado', () => {

@@ -47,11 +47,18 @@ e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atal
 **Operações:**
 `c` calcular · `l` termos semelhantes · `x` cancelar (opostos; fatores iguais selecionados em cima e embaixo, mesmo em frações diferentes de um produto) · `0` elemento neutro · `r` regra de sinais · `-` trocar os sinais (A(B + C) → −A(−B − C)) ·
 `d` distribuir · `e` pôr em evidência · `(` pôr entre parênteses · `p` remover parênteses · `g` agrupar ·
-`q` somar e subtrair… · `s` substituir… · `j` juntar frações (mesmo denominador ou produto: (a/b)(c/d) → ac/(bd)) · `f` separar fração ·
-`^` potências (aa → a², x²x³ → x⁵, já com o expoente calculado) · `m` potência como produto · `b` binômio ·
-`2` produto notável · `z` conjugado · `~` z ↔ z̄̄ · `h` z·z̄ ↔ |z|² · `v` z ± z̄ · `y` multiplicar pelo conjugado ·
+`q` somar e subtrair… · `s` substituir… ·
+`j` frações: a/c + b/c ↔ (a + b)/c e (a/b)(c/d) ↔ ac/(bd) (com seleção: (ab)/(cd), a e c marcados → (a/c)(b/d)) ·
+`*` multiplicar em cima e embaixo… ·
+`^` potências: aa ↔ a², xᵃxᵇ ↔ x^(a+b), aⁿbⁿ ↔ (ab)ⁿ, (xᵃ)ᵇ ↔ x^(ab), xⁿ → x·x·…·x (expoentes numéricos já calculados) ·
+`b` binômio/multinômio ↔ produto notável ·
+`z` conjugado · `~` z ↔ z̄̄ · `h` z·z̄ ↔ |z|² · `v` z ± z̄ · `y` multiplicar pelo conjugado ·
 `=` operar nos dois lados… · `t` trocar os lados · `i` estimar… · `+` `-` somar/subtrair equações (duas selecionadas) ·
 `>` substituir a variável isolada · `n` dar nome… · `k` expandir nome · `w` abrir área de trabalho
+
+Teclas de equivalência (`j`, `^`, `b`, …) funcionam nos dois sentidos: o app escolhe pela forma do que está em foco.
+Quando há mais de uma forma possível, a tecla aplica a primeira e, repetida logo em seguida, troca o passo pela próxima.
+No menu (Enter), cada forma aparece como um item.
 
 **Comandos:**
 `C` cor · `E` editar · `L` copiar LaTeX · `P` apresentação · `K` teclado na tela · `O` nota do passo ·
