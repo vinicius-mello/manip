@@ -15,6 +15,13 @@ function run(id, src, focus, sel = [], input) {
   return r?.tree ? toAscii(r.tree) : null;
 }
 
+// Rótulo do passo (em português), com as igualdades anotadas.
+function label(id, src, focus) {
+  const tree = parseAscii(src);
+  const r = rule(id).run({ tree, focus, targets: [focus] });
+  return r?.label && fmt(r.label);
+}
+
 // Todas as formas de uma equivalência, na ordem.
 function forms(id, src, focus, sel = []) {
   const tree = parseAscii(src);
@@ -258,7 +265,12 @@ test('juntar termos semelhantes', () => {
   assert.equal(run('like', '2x - 5x = 0', [0, 0]), '-3x = 0');
   assert.equal(run('like', 'x/2 + x/2 = 0', [0, 0]), '2(x/2) = 0', 'termos iguais, mesmo sendo frações');
   assert.equal(run('like', '(1/2)x + x = 0', [0, 0]), '(3/2)x = 0');
-  assert.equal(run('like', 'ab + ba = 0', [0, 0]), null, 'ordem diferente: reordenar antes');
+  assert.equal(run('like', 'ab + ba = 0', [0, 0]), '2ab = 0', 'ordem diferente: reconhece');
+  assert.equal(label('like', 'ab + ba = 0', [0, 0]), 'juntou termos semelhantes, usando ba = ab');
+  assert.equal(run('like', '2(x + 1) + 3(1 + x) = 0', [0, 0]), '5(x + 1) = 0');
+  assert.equal(label('cancel', '(a + b) - (b + a) = 0', [0, 0]), 'cancelou termos opostos, usando b + a = a + b');
+  assert.equal(label('factor', 'a(x + 1) + b(1 + x) = 0', [0, 0, 1]), 'pôs em evidência, usando 1 + x = x + 1');
+  assert.equal(label('like', '2x + 3x = 0', [0, 0]), 'juntou termos semelhantes', 'literal: sem nota');
   assert.equal(run('like', '2 + 3 = x', [0, 0]), null, 'constantes: calcular');
   assert.equal(run('like', 'a + b + a = 0', [0, 0], [[0, 0], [0, 2]]), '2a + b = 0');
 });
@@ -433,10 +445,11 @@ test('juntar frações vem antes de separar', () => {
   assert.equal(run('join', src, [0, 0], [[0, 0], [0, 1]]), joined, 'as duas selecionadas');
   assert.equal(forms('join', src, [0, 0], [[0, 0], [0, 1]]).length, 1, 'seleção: só juntar');
   assert.equal(run('join', 'a/((b)(c)) + d/(((b)(c))) = 0', [0]), '(a + d)/((b)(c)) = 0', 'parênteses a mais');
-  const r = rule('join').run({ tree: parseAscii('a/(b c) + d/(c b) = 0'), focus: [0], targets: [[0]] });
-  assert.equal(r.error, 'err.denomOrder', 'ordem dos fatores');
-  const onTerm = rule('join').run({ tree: parseAscii('a/(b c) + d/(c b) = 0'), focus: [0, 0], targets: [[0, 0]] });
-  assert.equal(onTerm.error, 'err.denomOrder', 'foco numa parcela: explica, não separa');
+  assert.equal(run('join', 'a/(b c) + d/(c b) = 0', [0]), '(a + d)/(bc) = 0', 'ordem dos fatores');
+  assert.equal(label('join', 'a/(b c) + d/(c b) = 0', [0]), 'juntou as frações, usando cb = bc');
+  assert.equal(run('join', 'a/(b c) + d/(c b) = 0', [0, 0]), '(a + d)/(bc) = 0', 'foco numa parcela: junta, não separa');
+  const onTerm = rule('join').run({ tree: parseAscii('a/(b c) + d/c = 0'), focus: [0, 0], targets: [[0, 0]] });
+  assert.equal(onTerm.error, 'err.denoms', 'denominadores diferentes, foco numa parcela: explica, não separa');
   assert.equal(run('join', 'a/(b c) + d/(c b) = 0', [0, 0, 0], [[0, 0, 0], [0, 0, 1, 0]]), '(a/b)(1/c) + d/(cb) = 0', 'dentro da fração: separa');
   assert.equal(rule('join').run({ tree: parseAscii('a/b + d/c = 0'), focus: [0], targets: [[0]] }).error, 'err.denoms');
 });
@@ -463,11 +476,6 @@ test('combinatória: fatorial e número binomial', () => {
   assert.equal(run('factorial', 'y = 5*4*3*2*1', [1]), 'y = 5!');
   assert.equal(run('factorial', 'y = ((n+1)-(k+1))*(((n+1)-(k+1))-1)!', [1]), 'y = ((n + 1) - (k + 1))!', 'agrupamento diferente');
   // forma normal: reconhece e anota a igualdade usada
-  const label = (id, src, focus) => {
-    const tree = parseAscii(src);
-    const r = rule(id).run({ tree, focus, targets: [focus] });
-    return r?.label && fmt(r.label);
-  };
   assert.equal(run('factorial', 'y = (n - k)(-1 - k + n)!', [1]), 'y = (n - k)!');
   assert.equal(label('factorial', 'y = (n - k)(-1 - k + n)!', [1]), 'juntou em fatorial, usando −1 − k + n = n − k − 1');
   assert.equal(label('factorial', 'y = (n - k)(n - k - 1)!', [1]), 'juntou em fatorial', 'literal: sem nota');
