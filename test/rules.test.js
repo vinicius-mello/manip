@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAscii } from '../src/parse-ascii.js';
 import { toAscii } from '../src/serialize.js';
-import { getAt } from '../src/ast.js';
+import { getAt, findPath } from '../src/ast.js';
 import { RULES, applicable } from '../src/rules/index.js';
 
 const rule = (id) => RULES.find((r) => r.id === id);
@@ -249,6 +249,17 @@ test('pôr em evidência: fator com sinal, entre parênteses e soma solta', () =
   assert.equal(run('factor', 'x(a + b) + y(a + b) = 0', [0, 0, 1]), '(x + y)(a + b) = 0');
   // −b em toda a soma
   assert.equal(run('factor', '-b + a*b = 0', [0, 0]), '-b(1 - a) = 0');
+});
+
+test('pôr em evidência: coeficientes numéricos à esquerda e em foco', () => {
+  assert.equal(run('factor', 'x*2 + x*3 = 0', [0, 0, 0]), '(2 + 3)x = 0');
+  assert.equal(run('factor', 'x + 3x = 0', [0, 0]), '(1 + 3)x = 0');
+  assert.equal(run('factor', 'x*2 - x = y', [0, 1, 0]), '(2 - 1)x = y');
+  assert.equal(run('factor', 'a x + 2 x = 0', [0, 0, 1]), '(a + 2)x = 0', 'nem todos numéricos: lado do 1º termo');
+  assert.equal(run('factor', 'x a + x*2 = 0', [0, 0, 0]), 'x(a + 2) = 0');
+  const tree = parseAscii('x*2 + x*3 = 0');
+  const r = rule('factor').run({ tree, focus: [0, 0, 0], targets: [[0, 0, 0]] });
+  assert.equal(toAscii(getAt(r.tree, findPath(r.tree, r.focus))), '2 + 3', 'coeficientes em foco');
 });
 
 test('pôr em evidência selecionando o fator em cada parcela', () => {
