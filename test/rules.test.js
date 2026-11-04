@@ -449,6 +449,9 @@ test('zero: 0·x → 0, 0/x → 0, x⁰ → 1', () => {
   assert.equal(run('neutral', 'y = x^0', [1]), 'y = 1');
   assert.equal(run('neutral', 'y = 0^0', [1]), null);
   assert.equal(run('neutral', 'y = 1x', [1]), 'y = x', 'neutro continua');
+  assert.equal(run('neutral', 'y = 1^(n + 1)', [1]), 'y = 1', '1ᵏ → 1');
+  assert.equal(run('neutral', 'y = 1^k 2', [1, 0]), 'y = 1*2');
+  assert.equal(run('neutral', 'y = 1^0', [1]), 'y = 1');
 });
 
 test('combinatória: fatorial e número binomial', () => {
