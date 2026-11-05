@@ -18,6 +18,7 @@ uma escolha explícita, com animação, e fica registrado no histórico.
 - Números complexos: aritmética exata, conjugado, `z·z̄ ↔ |z|²`, `z ± z̄ ↔ 2Re(z) / 2i·Im(z)`, multiplicar pelo conjugado.
 - Sistemas de equações: somar e subtrair equações, substituir uma variável nas outras.
 - Nomes para subexpressões, com áreas de trabalho próprias.
+- Modo apresentação com os passos anteriores empilhados e a justificativa de cada um ("↓ regra da cadeia") entre os passos.
 - Notas em cada passo e roteiro de aula: as animações ficam gravadas e se repetem no modo apresentação.
 - Gravação da apresentação em vídeo (MP4 ou WebM) com a voz do professor pelo microfone, avanço manual ou automático e título de abertura.
 - Exportação em LaTeX (passos em `aligned`), MathJSON e arquivo `.json`.
