@@ -61,3 +61,22 @@ test('teclas das operações: únicas, sem maiúsculas (reservadas aos comandos)
     assert.ok(!['[', ']', '\\', '?', ' ', '/'].includes(k), `tecla ${k} é de comando`);
   }
 });
+
+test('ajuda: exemplos da sintaxe são aceitos (ASCII e LaTeX dão a mesma fórmula) e têm texto', async () => {
+  const { SYNTAX } = await import('../src/syntax.js');
+  const { parseAscii } = await import('../src/parse-ascii.js');
+  const { parseLatex } = await import('../src/parse-latex.js');
+  const { looseSame } = await import('../src/serialize.js');
+  const { t, setLang } = await import('../src/i18n.js');
+  for (const lang of ['pt', 'en']) {
+    setLang(lang);
+    for (const [group, rows] of SYNTAX) {
+      assert.notEqual(t(group), group);
+      for (const [key, ascii, latex] of rows) {
+        assert.notEqual(t(key), key, `${lang}: ${key}`);
+        assert.ok(looseSame(parseAscii(ascii), parseLatex(latex)), `${ascii} ≠ ${latex}`);
+      }
+    }
+  }
+  setLang('pt');
+});

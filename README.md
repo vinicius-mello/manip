@@ -33,7 +33,7 @@ PDF: [atalhos](docs/manip-atalhos.pdf) · [cheat sheet](docs/manip-cheatsheet.pd
 
 As teclas seguem a ideia de um editor modal: **minúsculas, dígitos e símbolos
 aplicam operações direto na fórmula** (as mesmas teclas valem no menu do Enter),
-e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atalhos.
+e **maiúsculas (Shift) são comandos** da interface. **?** (ou o botão Ajuda) abre a ajuda, com uma aba de atalhos e outra com a sintaxe completa da entrada.
 
 | Tecla | Ação |
 |---|---|
@@ -70,7 +70,7 @@ As operações reconhecem o padrão também quando escrito de outro jeito equiva
 
 **Comandos:**
 `C` cor · `E` editar · `Y` copiar a expressão (texto) · `L` copiar LaTeX · `P` apresentação · `K` teclado na tela · `O` nota do passo ·
-`R` gravar vídeo · `[` `]` `\` tamanho da fórmula · `?` atalhos
+`R` gravar vídeo · `[` `]` `\` tamanho da fórmula · `?` ajuda (atalhos e sintaxe da entrada, também no botão Ajuda)
 
 ## Desenvolvimento
 
