@@ -356,6 +356,9 @@ test('trocar os sinais: A(B + C) → −A(−B − C)', () => {
   assert.equal(run('flipsigns', 'y = -int_0^1 (x + 1) dx', [1]), 'y = int_0^1 (-x - 1) dx');
   assert.equal(run('flipsigns', 'y = int (-x - 1) dx', [1]), 'y = -int (x + 1) dx');
   assert.equal(run('flipsigns', 'y = int x dx', [1]), 'y = -int -x dx', 'sem sinal: troca os dois');
+  assert.equal(run('flipsigns', 'y = a - sum_(k=1)^n k', [1, 1]), 'y = a + sum_(k=1)^n -k', 'o sinal entra no somatório');
+  assert.equal(run('flipsigns', 'y = a + sum_(k=1)^n -k', [1, 1]), 'y = a - sum_(k=1)^n k', 'o sinal sai do somatório');
+  assert.equal(run('flipsigns', 'y = -sum_(k=1)^n (k + 1)', [1]), 'y = sum_(k=1)^n (-k - 1)');
   // a mesma tecla "-" em sistemas continua subtraindo equações
   const subeq = RULES.find((r) => r.id === 'subeq');
   const tree = parseAscii('x + y = 3; x - y = 1');
