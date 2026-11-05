@@ -48,7 +48,7 @@ e **maiúsculas (Shift) são comandos** da interface. **?** (ou o botão Ajuda) 
 **Operações:**
 `c` calcular ↔ fatorar o número (12 ↔ 2²·3) · `l` termos semelhantes · `x` cancelar (opostos; fatores iguais selecionados em cima e embaixo, mesmo em frações diferentes de um produto) · `0` elemento neutro e zero (x + 0, 1·x → x; 0·x, 0/x → 0; x⁰ → 1; 1ᵏ → 1) · `r` regra de sinais ↔ sinal num fator (−ab ↔ (−a)b) · `-` trocar os sinais (A(B + C) → −A(−B − C); a − (b + c) ↔ a + (−b − c); a − ∫ f dx ↔ a + ∫ −f dx; a − Σ f ↔ a + Σ −f) ·
 `d` distribuir · `e` pôr em evidência · `(` pôr entre parênteses · `p` remover parênteses · `g` agrupar ·
-`q` somar e subtrair… · `s` substituir… ·
+`q` somar e subtrair… · `o` passo livre: digitar a nova forma do foco, como no quadro; o app confere numericamente (expressão: mesmo valor em vários pontos, com um contraexemplo se não for; equação: proporcional à original, então vale mover termos, trocar os lados e multiplicar por número; inequação: com o sentido certo) e marca "não conferida" quando não dá para calcular · `s` substituir… ·
 `j` frações: a/c + b/c ↔ (a + b)/c e (a/b)(c/d) ↔ ac/(bd) (com seleção: (ab)/(cd), a e c marcados → (a/c)(b/d)) ·
 `*` multiplicar em cima e embaixo… (sugere o fator que racionaliza: √2, 1 − √2) ·
 `^` potências e raízes: aa ↔ a², xᵃxᵇ ↔ x^(a+b), aⁿbⁿ ↔ (ab)ⁿ, (xᵃ)ᵇ ↔ x^(ab), xⁿ → x·x·…·x (expoentes numéricos já calculados), √a√b ↔ √(ab), √(a/b) ↔ √a/√b, (√a)² → a, √(a²) → |a|, √x ↔ x^(1/2) ·

@@ -567,3 +567,34 @@ test('trigonometria: valores notáveis', () => {
   assert.notEqual(v('sin(pi/5)'), 'y = 0');
   assert.ok(!forms('trig', 'y = tan(pi/2)', [1]).some((f) => !f.includes('tan') && !f.includes('sin')), 'tg(π/2) não tem valor');
 });
+
+test('passo livre: conferido numericamente', () => {
+  const rw = (src, focus, input) => {
+    const tree = parseAscii(src);
+    const r = rule('rewrite').run({ tree, focus, targets: [focus], input });
+    return r?.tree ? `${toAscii(r.tree)} | ${fmt(r.label)}` : r?.error;
+  };
+  assert.equal(rw('x^2 - 1 = 0', [0], '(x-1)(x+1)'), '(x - 1)(x + 1) = 0 | reescrita');
+  assert.equal(rw('x^2 - 1 = 0', [0], '(x-1)(x-1)'), 'err.rewriteExpr');
+  assert.equal(rw('y = sin(2x)', [1], '2sin(x)cos(x)'), 'y = 2sin(x)*cos(x) | reescrita');
+  assert.equal(rw('y = sqrt(x^2)', [1], 'abs(x)'), 'y = abs(x) | reescrita');
+  assert.equal(rw('y = sqrt(x^2)', [1], 'x'), 'err.rewriteExpr', 'os negativos denunciam');
+  // equações: proporcionais (mover termos, trocar os lados, multiplicar por número)
+  assert.equal(rw('2x + 3 = 7', [], '2x = 4'), '2x = 4 | reescrita');
+  assert.equal(rw('2x + 3 = 7', [], 'x = 2'), 'x = 2 | reescrita');
+  assert.equal(rw('x = 2', [], '2 = x'), '2 = x | reescrita');
+  assert.equal(rw('x^2 = 4', [], 'x = 2'), 'err.rewriteEq');
+  assert.equal(rw('2x < 4', [], 'x < 2'), 'x < 2 | reescrita');
+  assert.equal(rw('-2x < 4', [], 'x > -2'), 'x > -2 | reescrita');
+  assert.equal(rw('-2x < 4', [], 'x < -2'), 'err.rewriteSense');
+  assert.equal(rw('x = 1', [], 'x < 1'), 'err.rewriteRel');
+  // o que não dá para calcular entra marcado
+  assert.equal(rw('y = sum_(k=1)^n k', [1], 'n(n+1)/2'), 'y = (n(n + 1))/2 | reescrita (não conferida)');
+  assert.equal(rw('x = 1', [], 'x + 1'), 'err.rewriteNeedRel');
+  assert.equal(rw('y = x', [1], 'y = x'), 'err.rewriteNoRel');
+  assert.equal(rw('y = x', [1], 'x'), 'err.rewriteSame');
+  // os pedaços que não mudaram mantêm o id (animação)
+  const tree = parseAscii('x^2 - 1 = 0');
+  const r = rule('rewrite').run({ tree, focus: [], targets: [[]], input: 'x^2 = 1' });
+  assert.equal(r.tree.args[0].id, tree.args[0].args[0].id);
+});
