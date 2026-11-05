@@ -51,7 +51,7 @@ e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atal
 `j` frações: a/c + b/c ↔ (a + b)/c e (a/b)(c/d) ↔ ac/(bd) (com seleção: (ab)/(cd), a e c marcados → (a/c)(b/d)) ·
 `*` multiplicar em cima e embaixo… (sugere o fator que racionaliza: √2, 1 − √2) ·
 `^` potências e raízes: aa ↔ a², xᵃxᵇ ↔ x^(a+b), aⁿbⁿ ↔ (ab)ⁿ, (xᵃ)ᵇ ↔ x^(ab), xⁿ → x·x·…·x (expoentes numéricos já calculados), √a√b ↔ √(ab), √(a/b) ↔ √a/√b, (√a)² → a, √(a²) → |a|, √x ↔ x^(1/2) ·
-`f` funções: log(ab) ↔ log a + log b, log(a/b) ↔ log a − log b, log aⁿ ↔ n log a, ln eˣ → x, e^(ln x) → x, logₐ a → 1, mudança de base; sen² + cos² = 1, tg = sen/cos, paridade, arco duplo e soma de arcos (nos dois sentidos) ·
+`f` funções: log(ab) ↔ log a + log b, log(a/b) ↔ log a − log b, log aⁿ ↔ n log a, ln eˣ → x, e^(ln x) → x, logₐ a → 1, mudança de base; valores notáveis de sen, cos, tg, sec, cossec e cotg nos múltiplos de π/6 e π/4 (sen(π/6) → 1/2, cos(2π/3) → −1/2, tg(π/2) recusada) e de arcsen, arccos e arctg (arcsen(1/2) → π/6); sen² + cos² = 1, tg = sen/cos, paridade, arco duplo e soma de arcos (nos dois sentidos) ·
 `b` binômio/multinômio ↔ produto notável; (a + b)ⁿ ↔ Σ C(n, k) aⁿ⁻ᵏ bᵏ ·
 `!` fatorial e binomial: n! ↔ n·(n − 1)!, 5! ↔ 5·4·3·2·1, n! → Π k, C(n, k) ↔ n!/(k!(n − k)!), simetria C(n, k) ↔ C(n, n − k), Stifel C(n − 1, k − 1) + C(n − 1, k) ↔ C(n, k), C(n, 0) = C(n, n) = 1 ·
 `m` somatório e produtório: escrever os termos, fórmulas (Σk, Σk², Σk³, PG, ΣC(n, k) = 2ⁿ, Πk = n!), termo constante, constante para fora ↔ para dentro, Σ(f + g) ↔ Σf + Σg, telescópica, separar o último/primeiro termo ↔ incluir, juntar intervalos, deslocar o índice (`c` calcula com limites numéricos) ·

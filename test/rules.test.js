@@ -536,3 +536,25 @@ test('notação de somatório, binomial e fatorial', () => {
   assert.equal(toLatex(parseAscii('sum_(k=1)^n binom(n, k) + (n+1)!')), '\\sum_{k=1}^{n} \\binom{n}{k} + \\left(n + 1\\right)!');
   assert.equal(toAscii(parseAscii('(sum_(k=1)^n k) x')), '(sum_(k=1)^n k)x', 'Σ no meio do produto');
 });
+
+test('trigonometria: valores notáveis', () => {
+  const v = (src) => forms('trig', `y = ${src}`, [1])[0];
+  assert.equal(v('sin(0)'), 'y = 0');
+  assert.equal(v('sin(pi/6)'), 'y = 1/2');
+  assert.equal(v('sin(pi/4)'), 'y = sqrt(2)/2');
+  assert.equal(v('cos(pi/3)'), 'y = 1/2');
+  assert.equal(v('cos(pi)'), 'y = -1');
+  assert.equal(v('sin(pi/2)'), 'y = 1');
+  assert.equal(v('tan(pi/6)'), 'y = sqrt(3)/3');
+  assert.equal(v('tan(pi/4)'), 'y = 1');
+  assert.equal(v('cos(2pi/3)'), 'y = -1/2');
+  assert.equal(v('sin(7pi/6)'), 'y = -1/2');
+  assert.equal(v('sin(-pi/2)'), 'y = -1');
+  assert.equal(v('sec(pi/3)'), 'y = 2');
+  assert.equal(v('cot(pi/6)'), 'y = sqrt(3)');
+  assert.equal(v('arcsin(1/2)'), 'y = pi/6');
+  assert.equal(v('arccos(-1/2)'), 'y = (2pi)/3');
+  assert.equal(v('arctan(sqrt(3))'), 'y = pi/3');
+  assert.notEqual(v('sin(pi/5)'), 'y = 0');
+  assert.ok(!forms('trig', 'y = tan(pi/2)', [1]).some((f) => !f.includes('tan') && !f.includes('sin')), 'tg(π/2) não tem valor');
+});
