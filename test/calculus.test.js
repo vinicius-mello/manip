@@ -77,3 +77,52 @@ test('derivadas: f′, ordem superior, definição e sentidos inversos', () => {
   assert.equal(first('derivs', 'y = 3 d/dx x^2'), 'y = d/dx (3x^2)');
   assert.ok(forms('derivs', 'y = d/dx x^2').includes('y = lim_(h->0) ((x + h)^2 - x^2)/h | definição de derivada'));
 });
+
+// Operação que pede texto.
+function withInput(id, src, input, focus = [1]) {
+  const tree = parseAscii(src);
+  const r = RULES.find((x) => x.id === id).run({ tree, focus, targets: [focus], input });
+  return r?.tree ? toAscii(r.tree) : r?.error;
+}
+
+test('integrais: tabela, + C só quando resolvida, linearidade e limites', () => {
+  assert.equal(first('integrals', 'y = int x^2 dx'), 'y = (x^3)/3 + C');
+  assert.equal(first('integrals', 'y = int 5 dx'), 'y = 5x + C');
+  assert.equal(first('integrals', 'y = int 1/x dx'), 'y = ln(abs(x)) + C');
+  assert.equal(first('integrals', 'y = int 2^x dx'), 'y = (2^x)/ln(2) + C');
+  assert.equal(first('integrals', 'y = int sin x dx'), 'y = -cos(x) + C');
+  assert.equal(first('integrals', 'y = int 1/(1+x^2) dx'), 'y = arctan(x) + C');
+  assert.equal(first('integrals', "y = int f'(x) dx"), 'y = f(x) + C');
+  assert.equal(first('integrals', 'y = int t^n dt'), 'y = (t^(n + 1))/(n + 1) + C');
+  assert.equal(first('integrals', 'y = int x dx + int 1 dx', [1, 0]), 'y = (x^2)/2 + int 1 dx', 'sem C enquanto há integral');
+  assert.equal(first('integrals', 'y = x^2/2 + int 1 dx', [1, 1]), 'y = (x^2)/2 + x + C');
+  assert.equal(first('integrals', 'C = int x dx'), 'C = (x^2)/2 + C_1', 'C já usado');
+  assert.equal(first('integrals', 'y = int (3x^2 + 2x - 1) dx'), 'y = int 3x^2 dx + int 2x dx - int 1 dx');
+  assert.equal(first('integrals', 'y = int 3x^2 dx'), 'y = 3int x^2 dx');
+  assert.equal(first('integrals', 'y = int_0^1 x^2 dx'), 'y = [(x^3)/3]_(x=0)^1');
+  assert.equal(first('integrals', 'y = [x^3/3]_0^1'), 'y = (1^3)/3 - (0^3)/3');
+  assert.deepEqual(forms('intdef', 'y = int_0^1 x^2 dx'), [
+    'y = -int_1^0 x^2 dx | inverter os limites',
+    'y = lim_(n->oo) sum_(k=1)^n (k(1/n))^2(1/n) | soma de Riemann',
+  ]);
+  assert.ok(forms('integrals', 'y = int_a^a x dx').includes('y = 0 | intervalo vazio'));
+  assert.equal(first('integrals', 'y = int x dx + int x^2 dx'), 'y = int (x + x^2) dx');
+  assert.equal(first('integrals', 'y = int_0^1 x dx + int_1^2 x dx'), 'y = int_0^2 x dx');
+  assert.equal(first('integrals', 'y = 2 int x dx'), 'y = int 2x dx');
+  assert.equal(first('derivs', 'y = d/dx int_0^x sin(t^2) dt'), 'y = sin(x^2)');
+  assert.equal(first('derivs', 'y = d/dx int_x^(2x) e^t dt'), 'y = e^(2x)d/dx (2x) - e^x');
+});
+
+test('integrais: substituição e por partes', () => {
+  assert.equal(withInput('intsubst', 'y = int 2x cos(x^2) dx', 'u = x^2'), 'y = int cos(u) du');
+  assert.equal(withInput('intsubst', 'y = int x cos(x^2) dx', 'x^2'), 'y = int (1/2)*cos(u) du');
+  assert.equal(withInput('intsubst', 'y = int ln(x)/x dx', 'u = ln(x)'), 'y = int u du');
+  assert.equal(withInput('intsubst', 'y = int 2x/(x^2+1) dx', 'u = x^2 + 1'), 'y = int 1/u du');
+  assert.equal(withInput('intsubst', 'y = int_0^1 x e^(x^2) dx', 'u = x^2'), 'y = int_(0^2)^(1^2) (1/2)e^u du');
+  assert.equal(withInput('intsubst', 'y = int x^2 cos(x^2) dx', 'u = x^2'), 'err.substLeft');
+  assert.equal(withInput('intsubst', 'y = int x dx', 'u = t^2'), 'err.substU');
+  assert.equal(withInput('intparts', 'y = int x e^x dx', 'u = x'), 'y = xe^x - int e^x*d/dx x dx');
+  assert.equal(withInput('intparts', 'y = int ln(x) dx', 'u = ln(x)'), 'y = ln(x)x - int x*d/dx ln(x) dx');
+  assert.equal(withInput('intparts', 'y = int_0^1 x e^x dx', 'u = x'), 'y = [xe^x]_(x=0)^1 - int_0^1 e^x*d/dx x dx');
+  assert.equal(withInput('intparts', 'y = int x e^x dx', 'u = y'), 'err.partsU');
+});
