@@ -126,3 +126,29 @@ test('integrais: substituição e por partes', () => {
   assert.equal(withInput('intparts', 'y = int_0^1 x e^x dx', 'u = x'), 'y = [xe^x]_(x=0)^1 - int_0^1 e^x*d/dx x dx');
   assert.equal(withInput('intparts', 'y = int x e^x dx', 'u = y'), 'err.partsU');
 });
+
+test('limites: substituição, propriedades, notáveis, L\'Hôpital', () => {
+  assert.equal(first('limits', 'y = lim_(x->2) (x^2 + 1)'), 'y = 2^2 + 1');
+  assert.equal(first('limits', 'y = lim_(x->3) 5'), 'y = 5');
+  assert.equal(first('limits', 'y = lim_(x->1) (x^2-1)/(x-1)'), "y = lim_(x->1) (d/dx (x^2 - 1))/(d/dx (x - 1))");
+  assert.equal(forms('limits', 'y = lim_(x->1) (x^2-1)/(x-1)')[0].split(' | ')[1], "L'Hôpital (forma 0/0)");
+  assert.equal(first('limits', 'y = lim_(x->0) sin(x)/x'), 'y = 1');
+  assert.equal(first('limits', 'y = lim_(x->0) sin(3x)/(3x)'), 'y = 1');
+  assert.equal(first('limits', 'y = lim_(x->0) (e^x - 1)/x'), 'y = 1');
+  assert.equal(first('limits', 'y = lim_(x->oo) (1 + 2/x)^x'), 'y = e^2');
+  assert.equal(first('limits', 'y = lim_(x->oo) 1/x^2'), 'y = 0');
+  assert.equal(first('limits', 'y = lim_(x->oo) (2x+1)/(x+3)'), "y = lim_(x->oo) (d/dx (2x + 1))/(d/dx (x + 3))");
+  assert.equal(first('limits', 'y = lim_(x->2) 3x^2'), 'y = 3*2^2');
+  assert.ok(forms('limits', 'y = lim_(x->2) (x + 1)/(x - 1)').includes('y = (lim_(x->2) (x + 1))/(lim_(x->2) (x - 1)) | limite do quociente'));
+  assert.equal(first('limits', 'y = lim_(h->0) ((x+h)^2 - x^2)/h'), 'y = d/dx x^2');
+  assert.equal(first('limits', 'y = lim_(x->-oo) e^x'), 'y = lim_(t->0^-) e^(1/t)');
+});
+
+test('limites: substituição recusada nas formas indeterminadas', () => {
+  const tree = parseAscii('y = lim_(x->0) 1/x');
+  const r = RULES.find((x) => x.id === 'limits').run({ tree, focus: [1], targets: [[1]] });
+  assert.equal(r.error, 'err.limDiv0');
+  const s = parseAscii('y = lim_(x->1) (x^2-1)/(x-1)');
+  const all = RULES.find((x) => x.id === 'limits').all({ tree: s, focus: [1], targets: [[1]] });
+  assert.ok(!all.some((f) => f.label && fmt(f.label) === 'substituição direta'));
+});
