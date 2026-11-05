@@ -11,7 +11,7 @@ uma escolha explícita, com animação, e fica registrado no histórico.
 
 ## Recursos
 
-- Entrada em ASCII (`2x + 3 = 7`, `sqrt(x)`, `x^(n+1)`, `log_2 x`, `sin^2 x`, `n!`, `binom(n, k)`, `sum_(k=1)^n k^2`, `prod_(k=1)^n k`) ou LaTeX (`\frac{1}{2}`, `\sqrt[3]{x}`, `\log_2 x`, `\sin^2 x`, `\binom{n}{k}`, `\sum_{k=1}^{n}`), com teclado matemático na tela.
+- Entrada em ASCII (`2x + 3 = 7`, `sqrt(x)`, `x^(n+1)`, `log_2 x`, `sin^2 x`, `n!`, `binom(n, k)`, `sum_(k=1)^n k^2`, `prod_(k=1)^n k`, `lim_(x->0^+) 1/x`, `d/dx (x^2)`, `int_0^1 x^2 dx`, `[F]_a^b`, `f(x)`, `f'(x)`, `oo`) ou LaTeX (`\frac{1}{2}`, `\sqrt[3]{x}`, `\log_2 x`, `\sin^2 x`, `\binom{n}{k}`, `\sum_{k=1}^{n}`, `\lim_{x\to 0}`, `\frac{d}{dx}`, `\int_0^1 … \,dx`, `\left. F \right|_a^b`, `\infty`), com teclado matemático na tela.
 - Navegação e seleção pelo teclado; movimento de termos com animação (o termo "pula" o sinal de igual).
 - Menu de operações contextuais agrupado por assunto, com busca: calcular, distribuir, pôr em evidência, cancelar, termos semelhantes, frações, potências, binômio de Newton, produtos notáveis, radicais e racionalização, logaritmos e exponenciais, identidades trigonométricas, fatorial e número binomial, somatórios e produtórios, somar e subtrair (completar quadrados), substituir, operar nos dois lados.
 - Inequações (o sentido inverte ao multiplicar por negativo; multiplicar por letra é recusado) e a operação "Estimar" (`A = B → A ≤ C`).
