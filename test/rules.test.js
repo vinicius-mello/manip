@@ -350,6 +350,12 @@ test('trocar os sinais: A(B + C) → −A(−B − C)', () => {
   assert.equal(run('flipsigns', 'a + (-b - c) = 0', [0, 1]), 'a - (b + c) = 0', 'o sinal sai');
   assert.equal(run('flipsigns', 'y = -(b - c)', [1]), 'y = -b + c', 'fora de uma soma');
   assert.equal(run('flipsigns', 'a - 2(b + c) = 0', [0, 1]), 'a + 2(-b - c) = 0', 'produto');
+  assert.equal(run('flipsigns', 'y = a - int x dx', [1, 1]), 'y = a + int -x dx', 'o sinal entra na integral');
+  assert.equal(run('flipsigns', 'y = a - int x dx', [1, 1, 0]), 'y = a + int -x dx', 'foco na integral');
+  assert.equal(run('flipsigns', 'y = a + int -x dx', [1, 1]), 'y = a - int x dx', 'o sinal sai da integral');
+  assert.equal(run('flipsigns', 'y = -int_0^1 (x + 1) dx', [1]), 'y = int_0^1 (-x - 1) dx');
+  assert.equal(run('flipsigns', 'y = int (-x - 1) dx', [1]), 'y = -int (x + 1) dx');
+  assert.equal(run('flipsigns', 'y = int x dx', [1]), 'y = -int -x dx', 'sem sinal: troca os dois');
   // a mesma tecla "-" em sistemas continua subtraindo equações
   const subeq = RULES.find((r) => r.id === 'subeq');
   const tree = parseAscii('x + y = 3; x - y = 1');

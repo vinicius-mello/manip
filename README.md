@@ -45,7 +45,7 @@ e **maiúsculas (Shift) são comandos** da interface. **?** mostra todos os atal
 | PgUp PgDn Home End | percorrer os passos |
 
 **Operações:**
-`c` calcular ↔ fatorar o número (12 ↔ 2²·3) · `l` termos semelhantes · `x` cancelar (opostos; fatores iguais selecionados em cima e embaixo, mesmo em frações diferentes de um produto) · `0` elemento neutro e zero (x + 0, 1·x → x; 0·x, 0/x → 0; x⁰ → 1; 1ᵏ → 1) · `r` regra de sinais ↔ sinal num fator (−ab ↔ (−a)b) · `-` trocar os sinais (A(B + C) → −A(−B − C); a − (b + c) ↔ a + (−b − c)) ·
+`c` calcular ↔ fatorar o número (12 ↔ 2²·3) · `l` termos semelhantes · `x` cancelar (opostos; fatores iguais selecionados em cima e embaixo, mesmo em frações diferentes de um produto) · `0` elemento neutro e zero (x + 0, 1·x → x; 0·x, 0/x → 0; x⁰ → 1; 1ᵏ → 1) · `r` regra de sinais ↔ sinal num fator (−ab ↔ (−a)b) · `-` trocar os sinais (A(B + C) → −A(−B − C); a − (b + c) ↔ a + (−b − c); a − ∫ f dx ↔ a + ∫ −f dx) ·
 `d` distribuir · `e` pôr em evidência · `(` pôr entre parênteses · `p` remover parênteses · `g` agrupar ·
 `q` somar e subtrair… · `s` substituir… ·
 `j` frações: a/c + b/c ↔ (a + b)/c e (a/b)(c/d) ↔ ac/(bd) (com seleção: (ab)/(cd), a e c marcados → (a/c)(b/d)) ·
