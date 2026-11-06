@@ -589,7 +589,9 @@ test('passo livre: conferido numericamente', () => {
   assert.equal(rw('-2x < 4', [], 'x < -2'), 'err.rewriteSense');
   assert.equal(rw('x = 1', [], 'x < 1'), 'err.rewriteRel');
   // o que não dá para calcular entra marcado
-  assert.equal(rw('y = sum_(k=1)^n k', [1], 'n(n+1)/2'), 'y = (n(n + 1))/2 | reescrita (não conferida)');
+  assert.equal(rw('y = sum_(k=1)^n k', [1], 'n(n+1)/2'), 'y = (n(n + 1))/2 | reescrita', 'Σ com n inteiro');
+  assert.equal(rw('y = sum_(k=1)^n k', [1], 'n^2/2'), 'err.rewriteExpr');
+  assert.equal(rw('y = int x dx', [1], 'x^2/2'), 'y = (x^2)/2 | reescrita (não conferida)');
   assert.equal(rw('x = 1', [], 'x + 1'), 'err.rewriteNeedRel');
   assert.equal(rw('y = x', [1], 'y = x'), 'err.rewriteNoRel');
   assert.equal(rw('y = x', [1], 'x'), 'err.rewriteSame');
