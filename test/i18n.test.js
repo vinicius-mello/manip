@@ -64,8 +64,11 @@ test('teclas das operações: únicas, sem maiúsculas (reservadas aos comandos)
 
 test('ajuda: exemplos da sintaxe são aceitos (ASCII e LaTeX dão a mesma fórmula) e têm texto', async () => {
   const { SYNTAX } = await import('../src/syntax.js');
-  const { parseAscii } = await import('../src/parse-ascii.js');
-  const { parseLatex } = await import('../src/parse-latex.js');
+  const { parseInput, parseDefinition } = await import('../src/input.js');
+  const read = (s) => {
+    const d = parseDefinition(s);
+    return d ? { op: 'Equal', args: [{ op: 'Symbol', name: d.name }, d.def] } : parseInput(s);
+  };
   const { looseSame } = await import('../src/serialize.js');
   const { t, setLang } = await import('../src/i18n.js');
   for (const lang of ['pt', 'en']) {
@@ -74,7 +77,7 @@ test('ajuda: exemplos da sintaxe são aceitos (ASCII e LaTeX dão a mesma fórmu
       assert.notEqual(t(group), group);
       for (const [key, ascii, latex] of rows) {
         assert.notEqual(t(key), key, `${lang}: ${key}`);
-        assert.ok(looseSame(parseAscii(ascii), parseLatex(latex)), `${ascii} ≠ ${latex}`);
+        assert.ok(looseSame(read(ascii), read(latex)), `${ascii} ≠ ${latex}`);
       }
     }
   }

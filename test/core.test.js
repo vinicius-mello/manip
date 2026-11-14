@@ -109,3 +109,16 @@ test('agrupar e desagrupar', () => {
   t = move(t, getAt(t, [0, 0]).id, shiftIn);
   assert.equal(toAscii(t), '(a + b + c) = 0');
 });
+
+test('definição auxiliar K := expressão', async () => {
+  const { parseDefinition } = await import('../src/input.js');
+  const d = parseDefinition('K := x^2 + 1');
+  assert.equal(d.name, 'K');
+  assert.deepEqual(toMathJson(d.def), ['Add', ['Power', 'x', 2], 1]);
+  assert.equal(parseDefinition('A_{1} \\coloneqq \\frac{1}{2}').name, 'A_1');
+  assert.equal(parseDefinition('x + 1 = 2'), null);
+  assert.throws(() => parseDefinition('2x := 3'), { key: 'err.defName' });
+  assert.throws(() => parseDefinition('alpha := 3'), { key: 'err.defName' });
+  assert.throws(() => parseDefinition('K := '), { key: 'err.incomplete' });
+  assert.throws(() => parseDefinition('K := x +'), (e) => e.key === 'err.incomplete' && e.pos >= 5);
+});
