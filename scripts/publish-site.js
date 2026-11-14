@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const site = process.env.MANIP_SITE ?? join(homedir(), 'code', 'vinicius-mello.github.io');
 const dest = join(site, 'manip');
-const FILES = ['index.html', 'cheatsheet.html', 'style.css', 'src', 'docs'];
+const FILES = ['index.html', 'cheatsheet.html', 'manual.html', 'style.css', 'src', 'docs'];
 const today = new Date().toISOString().slice(0, 10);
 
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();

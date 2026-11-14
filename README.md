@@ -18,7 +18,7 @@ uma escolha explícita, com animação, e fica registrado no histórico.
 - Inequações (o sentido inverte ao multiplicar por negativo; multiplicar por letra é recusado) e a operação "Estimar" (`A = B → A ≤ C`).
 - Números complexos: aritmética exata, conjugado, `z·z̄ ↔ |z|²`, `z ± z̄ ↔ 2Re(z) / 2i·Im(z)`, multiplicar pelo conjugado.
 - Sistemas de equações: somar e subtrair equações, substituir uma variável nas outras.
-- Nomes para subexpressões, com áreas de trabalho próprias.
+- Nomes para subexpressões, com áreas de trabalho próprias; definições auxiliares digitadas (`K := x^2 + 1`) em abas novas; derivada parcial em relação a uma variável (os dois membros de uma igualdade), com `∂ₓK` para nomes e a expansão que calcula a derivada; busca reversa (a seleção que é a definição de um nome vira o nome).
 - Modo apresentação com os passos anteriores empilhados e a justificativa de cada um ("↓ regra da cadeia") entre os passos.
 - Notas em cada passo e roteiro de aula: as animações ficam gravadas e se repetem no modo apresentação.
 - Gravação da apresentação em vídeo (MP4 ou WebM) com a voz do professor pelo microfone, avanço manual ou automático e título de abertura.
@@ -31,6 +31,11 @@ Folha de atalhos para imprimir, com um exemplo de cada operação:
 [português](https://vinicius-mello.github.io/manip/cheatsheet.html?lang=pt) ·
 [English](https://vinicius-mello.github.io/manip/cheatsheet.html?lang=en) ·
 PDF: [atalhos](docs/manip-atalhos.pdf) · [cheat sheet](docs/manip-cheatsheet.pdf)
+
+Manual completo da aplicação (todos os recursos, com exemplos calculados pelo app):
+[português](https://vinicius-mello.github.io/manip/manual.html?lang=pt) ·
+[English](https://vinicius-mello.github.io/manip/manual.html?lang=en) ·
+PDF: [manual](docs/manip-manual.pdf) · [user manual](docs/manip-manual-en.pdf)
 
 As teclas seguem a ideia de um editor modal: **minúsculas, dígitos e símbolos
 aplicam operações direto na fórmula** (as mesmas teclas valem no menu do Enter),
@@ -82,6 +87,7 @@ simbólico é próprio (pasta `src/rules/`); MathJSON é usado como formato de t
 npm start   # servidor local sem cache em http://127.0.0.1:8765
 npm test    # testes (node --test)
 npm run cheatsheet   # regenera os PDFs da folha de atalhos (usa o Chrome)
+npm run manual       # regenera os PDFs do manual (usa o Chrome)
 npm run publish -- "descrição"   # envia ao GitHub e atualiza o site
 ```
 
