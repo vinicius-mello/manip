@@ -187,6 +187,12 @@ test('nomear, expandir e abrir', () => {
   assert.equal(toAscii(rule('expand').run(c2).tree), '2(x + 1) = y');
   assert.deepEqual(rule('open').run(c2).action, { type: 'open', name: 'K' });
   assert.equal(rule('expand').run({ ...c2, focus: [0, 0] }), null);
+
+  // nome com apóstrofos (também ′ digitado)
+  const primed = rule('name').run(ctx({ input: 'X′' }));
+  assert.equal(toAscii(primed.tree), "2X' = y");
+  const c3 = { tree: primed.tree, focus: [0, 1], targets: [[0, 1]], definitions: { "X'": parseAscii('x + 1') } };
+  assert.equal(toAscii(rule('expand').run(c3).tree), '2(x + 1) = y');
 });
 
 test('somar e subtrair a mesma quantidade', () => {

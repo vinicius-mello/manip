@@ -122,3 +122,18 @@ test('definição auxiliar K := expressão', async () => {
   assert.throws(() => parseDefinition('K := '), { key: 'err.incomplete' });
   assert.throws(() => parseDefinition('K := x +'), (e) => e.key === 'err.incomplete' && e.pos >= 5);
 });
+
+test("nomes com apóstrofos e subscritos com letras: X', X'', K_max", async () => {
+  const { parseDefinition, NAME_RE } = await import('../src/input.js');
+  const { sym } = await import('../src/ast.js');
+  assert.equal(parseDefinition("X' := x^2").name, "X'");
+  assert.equal(parseDefinition("X'' := 1").name, "X''");
+  assert.equal(parseDefinition("X_1' := 1").name, "X_1'");
+  assert.equal(parseDefinition('K_(max) := 1').name, 'K_max');
+  assert.equal(parseDefinition("K_{max}'' \\coloneqq 1").name, "K_max''");
+  assert.ok(NAME_RE.test("b_n'") && !NAME_RE.test("'X"));
+  assert.equal(toAscii(sym("X_ab'")), "X_(ab)'");
+  assert.equal(toLatex(sym("X_1''")), "X_{1}''");
+  // sem definição, y' continua sendo a derivada
+  assert.equal(parseAscii("y'").op, 'Call');
+});
