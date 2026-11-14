@@ -192,3 +192,24 @@ test('derivada parcial: derivar os dois membros, nomes e expansão', async () =>
   assert.equal(expand('partial_x M'), 'x*partial_x K + K');
   assert.equal(expand('partial_x K', [1]), 'partial_x (x^2y + sin(x) + 3)');
 });
+
+test('busca reversa: a seleção vira o nome definido', async () => {
+  const { RULES } = await import('../src/rules/index.js');
+  const { fmt } = await import('../src/i18n.js');
+  const fold = RULES.find((r) => r.id === 'fold');
+  const definitions = { K: parseAscii('x^2 + 1'), M: parseAscii('x^2 y + sin(x)') };
+  const run = (src, targets) => fold.all({ tree: parseAscii(src), focus: targets[0], targets, definitions });
+  const one = (src, ...targets) => toAscii(run(src, targets)[0].tree);
+  assert.equal(one('y = x^2 + 1', [1]), 'y = K');
+  assert.equal(one('y = 3(x^2 + 1)', [1, 1]), 'y = 3K');
+  assert.equal(one('y = x^2 + 3x + 1', [1, 0], [1, 2]), 'y = K + 3x', 'termos selecionados');
+  assert.equal(one('y = -x^2 - 1', [1]), 'y = -K', 'sinal trocado');
+  assert.deepEqual(run('y = 1 - x^2', [[1]]), []);
+  const r = run('y = 1 + x^2', [[1]])[0];
+  assert.equal(toAscii(r.tree), 'y = K');
+  assert.match(fmt(r.label), /usando/, 'forma normal anotada');
+  assert.equal(one('y = 2x y + cos(x)', [1]), 'y = partial_x M', 'derivada de um nome');
+  assert.equal(one('y = x^2', [1]), 'y = partial_y M');
+  assert.deepEqual(run('y = x^3', [[1]]), []);
+  assert.deepEqual(run('y = K', [[1]]), [], 'já é nome');
+});
