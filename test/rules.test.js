@@ -606,3 +606,26 @@ test('passo livre: conferido numericamente', () => {
   const r = rule('rewrite').run({ tree, focus: [], targets: [[]], input: 'x^2 = 1' });
   assert.equal(r.tree.args[0].id, tree.args[0].args[0].id);
 });
+
+test('identidades com nome: tecla k, nos dois sentidos', () => {
+  const identities = {
+    Q: parseAscii('(a+b)^2 = a^2 + 2a b + b^2'),
+    S: parseAscii('sin(x)^2 + cos(x)^2 = 1'),
+    H: parseAscii('x + y = 3'),
+  };
+  const all = (src, focus, targets = [focus]) => rule('identity').all({ tree: parseAscii(src), focus, targets, identities, definitions: {} })
+    .map((r) => toAscii(r.tree));
+  assert.deepEqual(all('y = (x + 3)^2', [1]), ['y = x^2 + 2x*3 + 3^2']);
+  assert.deepEqual(all('y = x^2 + 2x*3 + 3^2', [1]), ['y = (x + 3)^2']);
+  // termos fora de ordem, e outros termos na soma
+  assert.deepEqual(all('y = cos(t)^2 + 1 + sin(t)^2', [1]), ['y = 1 + 1']);
+  // equação que não é identidade: letras fixas, um lado pelo outro
+  assert.deepEqual(all('z = 2(y + x)', [1, 1]), ['z = 2*3']);
+  assert.deepEqual(all('z = 2(a + b)', [1, 1]), []);
+  // seleção de termos de uma soma
+  assert.deepEqual(all('w = sin(u)^2 + 5 + cos(u)^2', [1, 0], [[1, 0], [1, 2]]), ['w = 1 + 5']);
+  // n numa equação inteira: guarda a identidade, sem mudar a equação
+  const named = rule('name').run({ tree: parseAscii('(a+b)^2 = a^2 + 2a b + b^2'), focus: [], targets: [[]], input: 'Q' });
+  assert.equal(named.action.type, 'identity');
+  assert.equal(named.tree, undefined);
+});

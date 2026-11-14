@@ -4,8 +4,8 @@ import { parseAscii } from '../src/parse-ascii.js';
 import { RULES } from '../src/rules/index.js';
 import { EXAMPLES, exampleContext } from '../src/examples.js';
 
-// expand, fold e open dependem de um nome já definido.
-const WITHOUT_EXAMPLE = new Set(['expand', 'fold', 'open']);
+// expand, fold, open e identity dependem de um nome já definido.
+const WITHOUT_EXAMPLE = new Set(['expand', 'fold', 'open', 'identity']);
 
 test('toda operação tem exemplo na folha de atalhos', () => {
   for (const r of RULES) {
