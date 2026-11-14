@@ -152,3 +152,43 @@ test('limites: substituição recusada nas formas indeterminadas', () => {
   const all = RULES.find((x) => x.id === 'limits').all({ tree: s, focus: [1], targets: [[1]] });
   assert.ok(!all.some((f) => f.label && fmt(f.label) === 'substituição direta'));
 });
+
+test('derivada parcial: notação', async () => {
+  for (const s of ['partial_x (x^2y)', 'partial_x K + 1', 'partial_(x_1) x_1^2', 'partial_y K = partial_y (xy)']) assert.equal(roundTrip(s), s);
+  assert.equal(toAscii(parseAscii('∂/∂x x^2')), 'partial_x x^2');
+  assert.equal(toAscii(parseLatex('\\frac{\\partial}{\\partial x} x^2')), 'partial_x x^2');
+  assert.equal(toAscii(parseLatex('\\frac{\\partial K}{\\partial x}')), 'partial_x K');
+  assert.equal(toLatex(parseAscii('partial_x K')), '\\partial_{x} K');
+  assert.ok(!looseSame(parseAscii('partial_x x^2'), parseAscii('d/dx x^2')), '∂ ≠ d');
+});
+
+test('derivada parcial: derivar os dois membros, nomes e expansão', async () => {
+  const { RULES } = await import('../src/rules/index.js');
+  const { fmt } = await import('../src/i18n.js');
+  const rule = (id) => RULES.find((r) => r.id === id);
+  // nomes como o app os vê (chips)
+  const chips = (t) => JSON.parse(JSON.stringify(t), (k, v) => (v?.op === 'Symbol' && /^[KM]$/.test(v.name) ? { ...v, named: true } : v));
+  const definitions = { K: parseAscii('x^2 y + sin(x) + 3'), M: parseAscii('K x') };
+  const ctx = (src, focus = [], input) => ({ tree: chips(parseAscii(src)), focus, targets: [focus], input, definitions });
+
+  const r = rule('diff').run(ctx('K = x^2 y + sin(x) + 3', [1, 0], 'x'));
+  assert.equal(toAscii(r.tree), 'partial_x K = partial_x (x^2y + sin(x) + 3)');
+  assert.match(fmt(r.label), /dois membros/);
+  assert.equal(toAscii(rule('diff').run(ctx('x^2 + y', [], 'y')).tree), 'partial_y (x^2 + y)');
+  assert.equal(rule('diff').run(ctx('x < 1', [], 'x')).error, 'err.diffRelation');
+  assert.equal(rule('diff').run(ctx('x = 1', [], '2x')), null, 'variável inválida');
+
+  // as outras letras são constantes; o nome que depende de x fica ∂ₓK
+  const first = (src, focus = []) => toAscii(rule('derivs').all(ctx(src, focus))[0].tree);
+  assert.equal(first('partial_x (x^2 y)'), 'y*partial_x x^2');
+  assert.equal(first('partial_x (x^2 + K)'), 'partial_x x^2 + partial_x K');
+  assert.equal(rule('derivs').all(ctx('partial_x K')).length, 0);
+  assert.equal(first('partial_z K'), '0', 'K não depende de z');
+
+  // expandir ∂ₓK calcula a derivada da definição; com o foco em K, só a definição
+  const expand = (src, focus = []) => toAscii(rule('expand').run(ctx(src, focus)).tree);
+  assert.equal(expand('partial_x K'), '2xy + cos(x)');
+  assert.equal(expand('partial_y K'), 'x^2');
+  assert.equal(expand('partial_x M'), 'x*partial_x K + K');
+  assert.equal(expand('partial_x K', [1]), 'partial_x (x^2y + sin(x) + 3)');
+});
