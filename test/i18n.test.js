@@ -49,7 +49,7 @@ test('grafias brasileiras de funções', () => {
 
 test('teclas das operações: únicas, sem maiúsculas (reservadas aos comandos)', () => {
   // Teclas compartilhadas de propósito, por operações que nunca valem juntas.
-  const SHARED = { '-': ['flipsigns', 'subeq', 'rowsub'], '+': ['addeq', 'rowadd'], d: ['dist', 'laplace', 'mscalar'], e: ['factor', 'mfactor'], c: ['calc', 'mcalc'], j: ['join', 'msum'], '*': ['expandfrac', 'rowscale'], '#': ['mproduct', 'transpose', 'augmented', 'inverse'], x: ['cancel', 'minverse'], '0': ['neutral', 'mneutral'], f: ['logs', 'trig'], n: ['expand', 'fold', 'name'], "'": ['derivs', 'diff'], u: ['integrals', 'intsubst', 'intparts', 'intdef'] };
+  const SHARED = { '-': ['flipsigns', 'subeq', 'rowsub'], '+': ['addeq', 'rowadd'], d: ['dist', 'laplace', 'mscalar'], e: ['factor', 'mfactor'], c: ['calc', 'mcalc'], j: ['join', 'msum'], '*': ['expandfrac', 'rowscale'], '#': ['mproduct', 'transpose', 'augmented', 'inverse', 'vectors'], x: ['cancel', 'minverse'], '0': ['neutral', 'mneutral'], f: ['logs', 'trig'], n: ['expand', 'fold', 'name'], "'": ['derivs', 'diff'], u: ['integrals', 'intsubst', 'intparts', 'intdef'] };
   const keys = RULES.filter((r) => !SHARED[r.key]).map((r) => r.key);
   assert.equal(new Set(keys).size, keys.length, 'teclas repetidas');
   for (const [k, ids] of Object.entries(SHARED)) {

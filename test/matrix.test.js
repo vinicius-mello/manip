@@ -155,3 +155,31 @@ test('inversa: 2×2, Gauss-Jordan e AX = B', async () => {
     assert.equal(one('minverse', 'A B^(-1) = Id', [0]), null, 'A e B⁻¹ não se cancelam');
   });
 });
+
+test('vetores: leitura, produtos, norma e base', () => {
+  for (const s of ['(1, 2, 3) + vec(v)', 'cross(vec(u), vec(v))', 'abs((3, 4))', '2vec(i) - vec(k)']) {
+    const t = parseAscii(s);
+    assert.equal(toAscii(t), s);
+    assert.equal(toAscii(parseLatex(toLatex(t))), s, `LaTeX de ${s}`);
+    assert.equal(toAscii(fromMathJson(toMathJson(t))), s, `MathJSON de ${s}`);
+  }
+  assert.equal(toAscii(parseAscii('(1, 2) × (3, 4)')), 'cross((1, 2), (3, 4))', '× entre vetores');
+  assert.equal(toAscii(parseAscii('2 × 3')), '2*3', '× entre números');
+  assert.equal(one('vectors', 'p = (1, 2, 3)(4, 5, 6)', [1]), 'p = 1*4 + 2*5 + 3*6');
+  assert.equal(one('vectors', 'n = |(3, -4)|', [1]), 'n = sqrt(3^2 + (-4)^2)');
+  assert.equal(one('msum', 'w = (1, 2) - (a, b)', [1]), 'w = (1 - a, 2 - b)');
+  assert.equal(one('mscalar', 'w = 3(1, x)', [1]), 'w = (3*1, 3x)');
+  assert.equal(one('vectors', 'w = (2, 0, -1)', [1]), 'w = 2vec(i) - vec(k)');
+  assert.equal(one('vectors', 'w = 2vec(i) - vec(k)', [1]), 'w = (2, 0, -1)');
+});
+
+test('produto vetorial: determinante formal, Laplace e coordenadas', () => {
+  let s = one('vectors', 'w = (1, 2, 3) × (4, 5, 6)', [1]);
+  assert.equal(s, 'w = |vec(i), vec(j), vec(k); 1, 2, 3; 4, 5, 6|');
+  s = one('laplace', s, [1]);
+  assert.equal(s, 'w = vec(i)|2, 3; 5, 6| - vec(j)|1, 3; 4, 6| + vec(k)|1, 2; 4, 5|');
+  s = one('vectors', s, [1]);
+  assert.equal(s, 'w = (|2, 3; 5, 6|, -|1, 3; 4, 6|, |1, 2; 4, 5|)');
+  assert.equal(one('mcalc', 'w = (|2, 3; 5, 6|, -|1, 3; 4, 6|, |1, 2; 4, 5|)', [1]), null, 'c age nas coordenadas, uma a uma');
+  assert.equal(one('calc', s, [1, 0]), 'w = (-3, -|1, 3; 4, 6|, |1, 2; 4, 5|)');
+});
