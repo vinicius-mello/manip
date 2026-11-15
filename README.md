@@ -18,6 +18,7 @@ uma escolha explícita, com animação, e fica registrado no histórico.
 - Inequações (o sentido inverte ao multiplicar por negativo; multiplicar por letra é recusado) e a operação "Estimar" (`A = B → A ≤ C`).
 - Números complexos: aritmética exata, conjugado, `z·z̄ ↔ |z|²`, `z ± z̄ ↔ 2Re(z) / 2i·Im(z)`, multiplicar pelo conjugado.
 - Sistemas de equações: somar e subtrair equações, substituir uma variável nas outras.
+- Matrizes (`[1, 2; 3, 4]`) e determinantes (`|1, 2; 3, 4|`, `det A`, LaTeX `pmatrix`/`vmatrix`): desenvolver por uma linha ou coluna (Laplace) ou por Sarrus, fator comum de uma linha ou coluna, Lⱼ ← Lⱼ ± k·Lᵢ, trocar linhas ou colunas (com troca de sinal), transpor, número vezes matriz; `c` calcula determinantes numéricos.
 - Nomes para subexpressões, com áreas de trabalho próprias; definições auxiliares digitadas (`K := x^2 + 1`) em abas novas; derivada parcial em relação a uma variável (os dois membros de uma igualdade), com `∂ₓK` para nomes e a expansão que calcula a derivada; busca reversa (a seleção que é a definição de um nome vira o nome).
 - Modo apresentação com os passos anteriores empilhados e a justificativa de cada um ("↓ regra da cadeia") entre os passos.
 - Notas em cada passo e roteiro de aula: as animações ficam gravadas e se repetem no modo apresentação.
@@ -46,6 +47,7 @@ e **maiúsculas (Shift) são comandos** da interface. **?** (ou o botão Ajuda) 
 | ← → ↑ ↓ | navegar pela expressão |
 | Ctrl + ← → / ↑ ↓ | mover o termo, passar para o outro lado / sair ou entrar no grupo |
 | Shift + ← → | selecionar termos vizinhos |
+| Shift + ↑ ↓ | selecionar uma coluna (matriz ou determinante) |
 | Espaço · Esc | selecionar · limpar a seleção |
 | Enter | menu de operações (com prévia; `/` busca pelo nome) |
 | Ctrl + Z · Ctrl + Shift + Z | desfazer · refazer |
@@ -67,7 +69,8 @@ e **maiúsculas (Shift) são comandos** da interface. **?** (ou o botão Ajuda) 
 `u` integrais: tabela de primitivas (o `+ C` entra quando não sobra integral indefinida), linearidade nos dois sentidos, ∫ₐᵇ f → [F]ₐᵇ → F(b) − F(a), ∫ₐᵃ = 0, juntar intervalos; sem nenhuma dessas formas, pede a substituição `u = g(x)` (conferida numericamente; na definida os limites viram g(a) e g(b)); no menu, por partes (`u = …`, ∫ u dv = uv − ∫ v du), inverter os limites e soma de Riemann; d/dx ∫ₐ^g(x) f(t) dt pelo teorema fundamental (tecla `'`) ·
 `z` conjugado · `~` z ↔ z̄̄ · `h` z·z̄ ↔ |z|² · `v` z ± z̄ · `y` multiplicar pelo conjugado ·
 `=` operar nos dois lados… · `t` trocar os lados · `i` estimar… · `+` `-` somar/subtrair equações (duas selecionadas) ·
-`>` substituir a variável isolada · `n` dar nome… / expandir o nome (num nome) · `w` abrir área de trabalho
+`>` substituir a variável isolada ·
+matrizes e determinantes: `d` desenvolver (linha em foco, coluna selecionada; num 2×2, ad − bc; repetindo, Sarrus) e k·[…] → entradas multiplicadas · `e` fator comum (linha, coluna ou matriz inteira) · `+` `-` Lⱼ ± k·Lᵢ… (duas linhas selecionadas) · Ctrl + ↑ ↓ / ← → trocar linhas / colunas (o determinante troca de sinal) · `#` transpor (det A = det Aᵀ) · `n` dar nome… / expandir o nome (num nome) · `w` abrir área de trabalho
 
 Teclas de equivalência (`j`, `^`, `b`, …) funcionam nos dois sentidos: o app escolhe pela forma do que está em foco.
 Quando há mais de uma forma possível, a tecla aplica a primeira e, repetida logo em seguida, troca o passo pela próxima.
