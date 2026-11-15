@@ -134,3 +134,24 @@ test('sistema ↔ matriz aumentada', () => {
   assert.equal(toAscii(rules('augmented')[0].all(ctx('y = 2 - x; 2x - 3 = y + 1', []))[0].tree), '[1, 1, 2; 2, -1, 3 + 1]');
   assert.equal(rules('augmented')[0].all(ctx('x y = 1; x = 2', [])).length, 0, 'não linear');
 });
+
+test('inversa: 2×2, Gauss-Jordan e AX = B', async () => {
+  const { withEnvironment } = await import('../src/types.js');
+  const { parseHypotheses } = await import('../src/hypotheses.js');
+  assert.equal(one('inverse', 'M = [1, 2; 3, 4]^(-1)', [1]), 'M = (1/|1, 2; 3, 4|)[4, -2; -3, 1]');
+  assert.equal(rules('inverse')[0].all(ctx('M = [1, 2; 2, 4]^(-1)', [1]))[0].error, 'err.singular');
+  const gj = forms('inverse', '[1, 2; 3, 4]^(-1)', []);
+  assert.equal(gj[1], '[1, 2, 1, 0; 3, 4, 0, 1]', 'repetindo #: [A | I]');
+  const t = parseAscii('[1, 2, 1, 0; 3, 4, 0, 1] ~ [1, 0, -2, 1; 0, 1, 3/2, -1/2]');
+  t.args[1].aug = 2;
+  const r = rules('inverse')[0].all({ tree: t, focus: [1], targets: [[1]], definitions: {} })[0];
+  assert.equal(toAscii(r.tree), '[-2, 1; 3/2, -1/2]');
+  withEnvironment({ hyps: parseHypotheses('A, B, X in M(2)') }, () => {
+    let s = one('sides', 'A X = B', [], [], 'A^(-1) *');
+    assert.equal(s, 'A^(-1)AX = A^(-1)B');
+    s = one('minverse', s, [0]);
+    assert.equal(s, 'Id*X = A^(-1)B');
+    assert.equal(one('mneutral', s, [0]), 'X = A^(-1)B');
+    assert.equal(one('minverse', 'A B^(-1) = Id', [0]), null, 'A e B⁻¹ não se cancelam');
+  });
+});
