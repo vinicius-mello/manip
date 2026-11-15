@@ -84,3 +84,53 @@ test('trocar linhas ou colunas troca o sinal; transpor não muda', () => {
   assert.equal(shiftIn(parseAscii('M = [a, b; c, d]'), [1, 0]).error, 'err.matrixSwap');
   assert.equal(one('transpose', 'D = |a, b; c, d|', [1]), 'D = |a, c; b, d|');
 });
+
+const ids = (t) => {
+  const out = [];
+  const go = (n) => { out.push(n.id); (n.args ?? []).forEach(go); };
+  go(t);
+  return out;
+};
+
+test('soma, produto e transposta de matrizes', () => {
+  assert.equal(one('msum', 'M = [1, 2] + [a, b]', [1]), 'M = [1 + a, 2 + b]');
+  assert.equal(one('msum', 'M = [1, 2] - [a, b]', [1]), 'M = [1 - a, 2 - b]');
+  assert.equal(one('msum', 'M = [1 + a, 2 + b]', [1]), 'M = [1, 2] + [a, b]', 'separar');
+  const c = ctx('M = [1, 2] + [1, 2, 3]', [1]);
+  assert.equal(rules('msum')[0].all(c)[0].error, 'err.dims');
+  assert.equal(one('mproduct', 'M = [1, 2; 3, 4][x; y]', [1]), 'M = [1x + 2y; 3x + 4y]');
+  assert.equal(one('mproduct', 'M = 2[a, b][c; d]', [1, 1]), 'M = 2[ac + bd]');
+  assert.equal(one('mproduct', 'M = [1, 2; 3, 4]^T', [1]), 'M = [1, 3; 2, 4]');
+  assert.equal(one('mcalc', '[1, 2; 3 - 3*1, 4 - 3*2]', []), '[1, 2; 0, -2]');
+  assert.equal(one('mcalc', '[1 + 1, 2; 3 - 3*1, 4 - 3*2]', [1]), '[1 + 1, 2; 0, -2]', 'só a linha em foco');
+});
+
+test('operações de linha numa matriz: A ∼ A′', () => {
+  const r = one('rowadd', '[1, 2; 3, 4]', [1], [[0], [1]], '-3');
+  assert.equal(r, '[1, 2; 3, 4] ~ [1, 2; 3 + (-3)*1, 4 + (-3)*2]');
+  const t = parseAscii(r);
+  assert.equal(new Set(ids(t)).size, ids(t).length, 'a cópia da esquerda tem ids novos');
+  assert.equal(one('rowadd', '[1, 2; 3, 4] ~ [1, 2; 0, -2]', [1, 1], [[1, 0], [1, 1]], '1'), '[1, 2; 0, -2] ~ [1, 2; 0 + 1, -2 + 2]', 'continua da última');
+  assert.ok(!rules('rowadd')[0].available(ctx('[1, 2; 3, 4] ~ [1, 2; 0, -2]', [0, 1], [[0, 0], [0, 1]])), 'a da esquerda não muda');
+  assert.ok(!rules('rowadd')[0].available(ctx('M = [1, 2; 3, 4]', [1, 1], [[1, 0], [1, 1]])), 'numa equação, não');
+  assert.equal(one('rowscale', '[2, 4; 1, 3]', [0], [], '1/2'), '[2, 4; 1, 3] ~ [(1/2)*2, (1/2)*4; 1, 3]');
+  assert.equal(rules('rowscale')[0].suggest(ctx('[2, 4; 1, 3]', [0])), '1/2');
+  assert.equal(rules('rowscale')[0].run(ctx('[2, 4; 1, 3]', [0], [], '0')).error, 'err.rowZero');
+  assert.equal(toAscii(shiftIn(parseAscii('[a, b; c, d]'), [0]).tree), '[a, b; c, d] ~ [c, d; a, b]');
+  assert.equal(shiftSideways(parseAscii('[a, b; c, d]'), [0, 0], +1).error, 'err.matrixSwap', 'colunas, não');
+  const eq = parseAscii('[1, 2] ~ [1, 0]');
+  assert.equal(toAscii(parseLatex(toLatex(eq))), '[1, 2] ~ [1, 0]');
+});
+
+test('sistema ↔ matriz aumentada', () => {
+  const c = ctx('x + 2y = 5; 3x - y = 1', []);
+  const m = rules('augmented')[0].all(c)[0].tree;
+  assert.equal(toAscii(m), '[1, 2, 5; 3, -1, 1]');
+  assert.ok(m.aug);
+  assert.deepEqual(m.vars, ['x', 'y']);
+  assert.match(toLatex(m), /\\begin\{array\}\{cc\|c\}/);
+  const back = rules('augmented')[0].all({ tree: m, focus: [], targets: [[]], definitions: {} })[0].tree;
+  assert.equal(toAscii(back), 'x + 2y = 5; 3x - y = 1');
+  assert.equal(toAscii(rules('augmented')[0].all(ctx('y = 2 - x; 2x - 3 = y + 1', []))[0].tree), '[1, 1, 2; 2, -1, 3 + 1]');
+  assert.equal(rules('augmented')[0].all(ctx('x y = 1; x = 2', [])).length, 0, 'não linear');
+});
