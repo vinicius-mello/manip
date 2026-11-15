@@ -65,7 +65,10 @@ test('teclas das operações: únicas, sem maiúsculas (reservadas aos comandos)
 test('ajuda: exemplos da sintaxe são aceitos (ASCII e LaTeX dão a mesma fórmula) e têm texto', async () => {
   const { SYNTAX } = await import('../src/syntax.js');
   const { parseInput, parseDefinition } = await import('../src/input.js');
+  const { parseHypotheses, hypothesisTree } = await import('../src/hypotheses.js');
   const read = (s) => {
+    const h = parseHypotheses(s);
+    if (h) return hypothesisTree(h[0]);
     const d = parseDefinition(s);
     return d ? { op: 'Equal', args: [{ op: 'Symbol', name: d.name }, d.def] } : parseInput(s);
   };
