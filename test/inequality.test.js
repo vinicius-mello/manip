@@ -107,3 +107,23 @@ test('potência de potência: (x²)^(1/2) = |x|, não x', () => {
   assert.equal(run('powers', '(x^2)^3 = 6', undefined, [0]), 'x^6 = 6');
   assert.equal(run('powers', '(x^3)^(1/3) = 6', undefined, [0]), 'x = 6');
 });
+
+test('revisão: ×0, ÷0 e ^0 nos dois lados são recusados', () => {
+  assert.equal(run('sides', 'x + 1 = 3', '* 0'), 'err.zero');
+  assert.equal(run('sides', 'x + 1 = 3', '/ 0'), 'err.zero');
+  assert.equal(run('sides', 'x + 1 = 3', '^ 0'), 'err.powZero');
+  assert.equal(run('sides', 'x != 2', '* 0'), 'err.zero');
+  assert.equal(run('sides', 'x + 1 = 3', '* (1 - 1)'), 'err.zero');
+});
+
+test('revisão: passar fator 0 é recusado; fator que pode ser 0 avisa', async () => {
+  const { shiftSideways } = await import('../src/moves.js');
+  const { msg } = await import('../src/i18n.js');
+  const mv = (src, path, dir) => { const r = shiftSideways(parseAscii(src), path, dir); return r?.error ?? (r && [toAscii(r.tree), r.label]); };
+  assert.equal(mv('y = 0 x', [1, 0], -1), 'err.zero');
+  const [t, label] = mv('x a = b', [0, 1], +1);
+  assert.equal(t, 'x = b/a');
+  assert.deepEqual(label, msg('step.transposeFactorNZ', { e: 'a' }));
+  assert.deepEqual(mv('x*2 = 4', [0, 1], +1)[1], msg('step.transposeFactor'));
+  assert.equal(shiftSideways(parseAscii('2 x'), [], +1), null, 'raiz sem pai');
+});

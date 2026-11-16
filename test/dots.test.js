@@ -38,7 +38,7 @@ test('reticências absorvem as operações termo a termo', () => {
   assert.equal(run('powers', 'x = (a*...*c)^n', [1]), 'x = a^n*...*c^n');
   assert.equal(run('powers', 'x = a^n*...*c^n', [1]), 'x = (a*...*c)^n');
   assert.equal(run('powers', 'x = 2^(a + ... + c)', [1]), 'x = 2^a*...*2^c');
-  assert.equal(run('logs', 'x = ln(a*...*c)', [1]), 'x = ln(a) + ... + ln(c)');
+  assert.equal(run('logs', 'x = ln(a*...*c)', [1]), 'x = ln(abs(a)) + ... + ln(abs(c))');
   assert.equal(run('logs', 'x = ln a + ... + ln c', [1]), 'x = ln(a*...*c)');
   assert.equal(run('conj', 'x = conj(a + ... + c)', [1]), 'x = conj(a) + ... + conj(c)');
   assert.equal(run('derivs', 'y = d/dx (f(x) + ... + g(x))', [1]), 'y = d/dx f(x) + ... + d/dx g(x)');

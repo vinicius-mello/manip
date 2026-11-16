@@ -48,7 +48,8 @@ test('equivalências nos dois sentidos', () => {
   assert.equal(run('powers', '(a/b)^2 = 1', [0]), '(a^2)/(b^2) = 1');
   assert.equal(run('powers', 'x^(a + b) = 1', [0]), 'x^ax^b = 1');
   assert.equal(run('powers', 'x^(2 + 3) = 1', [0]), 'x^2x^3 = 1');
-  assert.equal(run('powers', 'x^(a b) = 1', [0]), '(x^a)^b = 1');
+  assert.notEqual(run('powers', 'x^(a b) = 1', [0]), '(x^a)^b = 1', 'x pode ser negativo');
+  assert.equal(run('powers', '2^(a b) = 1', [0]), '(2^a)^b = 1');
   assert.deepEqual(forms('powers', 'x^2 x^2 = 1', [0]), ['x^4 = 1', '(xx)^2 = 1']);
   // binômio ↔ produto notável
   assert.equal(run('binomial', '(x + 3)^2 = 0', [0]), 'x^2 + 2x*3 + 3^2 = 0');
@@ -383,9 +384,12 @@ test('inversos: regra de sinais e fatoração de números', () => {
 });
 
 test('logaritmos e exponenciais', () => {
-  assert.equal(run('logs', 'y = log(a b)', [1]), 'y = log(a) + log(b)');
-  assert.equal(run('logs', 'y = ln(a/b)', [1]), 'y = ln(a) - ln(b)');
-  assert.equal(run('logs', 'y = log_2(x^3)', [1]), 'y = 3log_2(x)');
+  // Sem saber os sinais: ln(ab) = ln|a| + ln|b| (vale com ab > 0).
+  assert.equal(run('logs', 'y = log(a b)', [1]), 'y = log(abs(a)) + log(abs(b))');
+  assert.equal(run('logs', 'y = ln(a/b)', [1]), 'y = ln(abs(a)) - ln(abs(b))');
+  assert.equal(run('logs', 'y = ln(2 b)', [1]), 'y = ln(2) + ln(abs(b))');
+  assert.equal(run('logs', 'y = log_2(x^3)', [1]), 'y = 3log_2(x)', 'potência ímpar: sem módulo');
+  assert.equal(run('logs', 'y = ln(x^2)', [1]), 'y = 2ln(abs(x))');
   assert.equal(run('logs', 'y = ln(sqrt(x))', [1]), 'y = (1/2)*ln(x)');
   assert.equal(run('logs', 'y = log(a) + log(b) - log(c)', [1]), 'y = log((ab)/c)');
   assert.equal(run('logs', 'y = ln(a) + ln(b) + c', [1], [[1, 0], [1, 1]]), 'y = ln(ab) + c');
@@ -628,4 +632,34 @@ test('identidades com nome: tecla k, nos dois sentidos', () => {
   const named = rule('name').run({ tree: parseAscii('(a+b)^2 = a^2 + 2a b + b^2'), focus: [], targets: [[]], input: 'Q' });
   assert.equal(named.action.type, 'identity');
   assert.equal(named.tree, undefined);
+});
+
+test('revisão: sinais em potências, logaritmos e binômio', async () => {
+  const { withEnvironment } = await import('../src/types.js');
+  const { parseHypotheses } = await import('../src/hypotheses.js');
+  const env = (h, f) => withEnvironment({ hyps: parseHypotheses(h) }, f);
+  // (ab)^e = a^e b^e só com e inteiro ou no máximo uma base negativa
+  assert.notEqual(run('powers', 'y = (x y)^(1/2)', [1]), 'y = x^(1/2)y^(1/2)');
+  assert.equal(run('powers', 'y = (x y)^3', [1]), 'y = x^3y^3');
+  assert.equal(run('powers', 'y = (2y)^(1/2)', [1]), 'y = 2^(1/2)y^(1/2)');
+  assert.notEqual(run('powers', 'y = x^(1/2) x^(1/2)', [1]), 'y = (xx)^(1/2)');
+  assert.equal(env('seja x > 0', () => run('powers', 'y = (x y)^(1/2)', [1])), 'y = x^(1/2)y^(1/2)');
+  // logaritmos: com hipótese, sem módulo
+  assert.equal(env('seja a > 0; b > 0', () => run('logs', 'y = log(a b)', [1])), 'y = log(a) + log(b)');
+  assert.equal(env('seja x > 0', () => run('logs', 'y = ln(x^2)', [1])), 'y = 2ln(x)');
+  // binômio de Newton: expoente natural
+  assert.equal(run('binomial', 'y = (1 + 2/x)^x', [1]), null);
+  assert.ok(run('binomial', 'y = (a + b)^n', [1]).startsWith('y = sum_'));
+  assert.ok(env('k in N', () => run('binomial', 'y = (a + b)^k', [1])).startsWith('y = sum_'));
+});
+
+test('revisão: ( não envolve a variável de Σ, d/dx, ∫', () => {
+  assert.equal(run('wrap', 'y = sum_(k=1)^n k', [1, 0]), null);
+  assert.equal(run('wrap', 'partial_x (x^2 y)', [0]), null);
+  assert.equal(run('wrap', 'y = int x dx', [1, 0]), null);
+});
+
+test('revisão: nenhuma regra troca a variável de ∂ por uma expressão', () => {
+  const r = RULES.find((x) => x.id === 'addsub');
+  assert.equal(r.run({ tree: parseAscii('partial_x (x^2 y)'), focus: [0], targets: [[0]], input: '2' }), null);
 });
