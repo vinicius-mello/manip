@@ -183,3 +183,9 @@ test('produto vetorial: determinante formal, Laplace e coordenadas', () => {
   assert.equal(one('mcalc', 'w = (|2, 3; 5, 6|, -|1, 3; 4, 6|, |1, 2; 4, 5|)', [1]), null, 'c age nas coordenadas, uma a uma');
   assert.equal(one('calc', s, [1, 0]), 'w = (-3, -|1, 3; 4, 6|, |1, 2; 4, 5|)');
 });
+
+test('a linha que muda é a do foco', () => {
+  assert.equal(one('rowadd', '[1, 2; 0, 1]', [0], [[0], [1]], '-2'), '[1, 2; 0, 1] ~ [1 + (-2)*0, 2 + (-2)*1; 0, 1]', 'L₁ ← L₁ − 2L₂');
+  assert.equal(one('rowadd', '[1, 2; 3, 4]', [1], [[0], [1]], '-3'), '[1, 2; 3, 4] ~ [1, 2; 3 + (-3)*1, 4 + (-3)*2]', 'foco em L₂');
+  assert.equal(rules('rowadd')[0].suggest(ctx('[1, 2; 0, 1]', [0], [[0], [1]])), '-2', 'sugere o k que zera a entrada de L₁');
+});
