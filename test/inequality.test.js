@@ -87,3 +87,23 @@ test('estimar: A = B → A ≤ C ou C ≤ B', () => {
   assert.equal(run('estimate', 'a = b', 'c'), null);
   assert.equal(run('estimate', 'a = b', '= c'), null, 'só desigualdades');
 });
+
+test('raiz dos dois lados e ±: (x − 2)² = 6 → x − 2 = ±√6', () => {
+  assert.equal(run('sides', '(x - 2)^2 = 6', 'sqrt'), 'sqrt((x - 2)^2) = sqrt(6)');
+  assert.equal(run('sides', 'x^2 < 4', 'sqrt'), 'err.powerIneq');
+  assert.equal(run('powers', 'sqrt((x - 2)^2) = sqrt(6)', undefined, [0]), 'abs(x - 2) = sqrt(6)');
+  assert.equal(run('abseq', 'abs(x - 2) = sqrt(6)'), 'x - 2 = +-sqrt(6)');
+  assert.equal(run('abseq', 'abs(x - 1) = 2 + sqrt(3)'), 'x - 1 = +-(2 + sqrt(3))');
+  assert.equal(run('abseq', 'abs(x) = -3'), 'err.absNegative');
+  assert.equal(run('abseq', 'abs(x) = y'), 'err.absSign');
+  // ± na entrada: +-, ± e \pm
+  assert.equal(toAscii(parseAscii('x = 2 ± sqrt(6)')), 'x = 2 +- sqrt(6)');
+  assert.deepEqual(toMathJson(parseLatex('x = 2 \\pm 3')), toMathJson(parseAscii('x = 2 +- 3')));
+  assert.equal(toLatex(parseAscii('x = +-3')), 'x = \\pm 3');
+});
+
+test('potência de potência: (x²)^(1/2) = |x|, não x', () => {
+  assert.equal(run('powers', '((x - 2)^2)^(1/2) = 6', undefined, [0]), 'abs(x - 2) = 6');
+  assert.equal(run('powers', '(x^2)^3 = 6', undefined, [0]), 'x^6 = 6');
+  assert.equal(run('powers', '(x^3)^(1/3) = 6', undefined, [0]), 'x = 6');
+});
