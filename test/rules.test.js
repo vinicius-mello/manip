@@ -427,9 +427,9 @@ test('trigonometria', () => {
 
 test('radicais', () => {
   assert.equal(run('powers', 'y = sqrt(2)sqrt(3)', [1]), 'y = sqrt(2*3)');
-  assert.equal(run('powers', 'y = sqrt(a b)', [1]), 'y = sqrt(a)*sqrt(b)');
-  assert.equal(run('powers', 'y = sqrt(a/b)', [1]), 'y = sqrt(a)/sqrt(b)');
-  assert.equal(run('powers', 'y = sqrt(a)/sqrt(b)', [1]), 'y = sqrt(a/b)');
+  assert.equal(run('powers', 'y = sqrt(2b)', [1]), 'y = sqrt(2)*sqrt(b)');
+  assert.equal(run('powers', 'y = sqrt(a/3)', [1]), 'y = sqrt(a)/sqrt(3)');
+  assert.equal(run('powers', 'y = sqrt(a)/sqrt(3)', [1]), 'y = sqrt(a/3)');
   assert.equal(run('powers', 'y = sqrt(x)^2', [1]), 'y = x');
   assert.equal(run('powers', 'y = sqrt(x^2)', [1]), 'y = abs(x)');
   assert.equal(run('powers', 'y = sqrt(3^2)', [1]), 'y = 3');

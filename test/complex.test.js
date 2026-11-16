@@ -95,3 +95,25 @@ test('z ↔ z̄̄ nos dois sentidos', () => {
   assert.equal(run('dconj', 'w = x + 1', [1, 0]), null, 'sem complexos na expressão');
   assert.equal(run('dconj', 'w = i', []), null, 'não na equação inteira');
 });
+
+test('√(−1) = i e os sinais nos radicais', async () => {
+  const { RULES } = await import('../src/rules/index.js');
+  const { parseAscii } = await import('../src/parse-ascii.js');
+  const { toAscii } = await import('../src/serialize.js');
+  const { withEnvironment } = await import('../src/types.js');
+  const { parseHypotheses } = await import('../src/hypotheses.js');
+  const pw = RULES.find((r) => r.id === 'powers');
+  const first = (src, hyps = '') => withEnvironment({ hyps: hyps ? parseHypotheses(hyps) : [] }, () => {
+    const o = pw.run({ tree: parseAscii(src), focus: [1], targets: [[1]], definitions: {} });
+    return o?.error ?? toAscii(o.tree);
+  });
+  assert.equal(first('z = sqrt(-1)'), 'z = i');
+  assert.equal(first('z = sqrt(-4)'), 'z = i*sqrt(4)');
+  assert.equal(first('z = sqrt(-a)', 'seja a > 0'), 'z = i*sqrt(a)');
+  assert.equal(first('z = sqrt(-2) sqrt(-3)'), 'err.sqrtSigns');
+  assert.equal(first('z = sqrt(x) sqrt(y)'), 'err.sqrtSigns');
+  assert.equal(first('z = sqrt(x) sqrt(y)', 'seja x > 0'), 'z = sqrt(xy)');
+  assert.equal(first('z = sqrt(2) sqrt(-3)'), 'z = sqrt(2(-3))');
+  assert.equal(first('z = sqrt(x)/sqrt(y)'), 'err.sqrtDenominator');
+  assert.equal(first('z = sqrt(x)/sqrt(y)', 'seja y > 0'), 'z = sqrt(x/y)');
+});
