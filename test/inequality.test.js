@@ -94,7 +94,9 @@ test('raiz dos dois lados e ±: (x − 2)² = 6 → x − 2 = ±√6', () => {
   assert.equal(run('abseq', 'abs(x - 2) = sqrt(6)'), 'x - 2 = +-sqrt(6)');
   assert.equal(run('abseq', 'abs(x - 1) = 2 + sqrt(3)'), 'x - 1 = +-(2 + sqrt(3))');
   assert.equal(run('abseq', 'abs(x) = -3'), 'err.absNegative');
-  assert.equal(run('abseq', 'abs(x) = y'), 'err.absSign');
+  assert.equal(run('abseq', 'abs(x) = y'), 'x = +-y', 'expressão: passa com aviso');
+  assert.equal(run('abseq', 'abs(x) = y + 1'), 'x = +-(y + 1)');
+  assert.equal(run('abseq', 'abs(x) = 1 - pi'), 'err.absNegative');
   // ± na entrada: +-, ± e \pm
   assert.equal(toAscii(parseAscii('x = 2 ± sqrt(6)')), 'x = 2 +- sqrt(6)');
   assert.deepEqual(toMathJson(parseLatex('x = 2 \\pm 3')), toMathJson(parseAscii('x = 2 +- 3')));
