@@ -101,6 +101,13 @@ test('raiz dos dois lados e ±: (x − 2)² = 6 → x − 2 = ±√6', () => {
   assert.equal(toAscii(parseAscii('x = 2 ± sqrt(6)')), 'x = 2 +- sqrt(6)');
   assert.deepEqual(toMathJson(parseLatex('x = 2 \\pm 3')), toMathJson(parseAscii('x = 2 +- 3')));
   assert.equal(toLatex(parseAscii('x = +-3')), 'x = \\pm 3');
+  // ∓: -+, ∓ e \mp; regra de sinais −(±a) = ∓a
+  assert.equal(toAscii(parseAscii('x = 2 ∓ sqrt(6)')), 'x = 2 -+ sqrt(6)');
+  assert.deepEqual(toMathJson(parseLatex('x = 2 \\mp 3')), toMathJson(parseAscii('x = 2 -+ 3')));
+  assert.equal(toLatex(parseAscii('x = -+3')), 'x = \\mp 3');
+  assert.equal(run('signs', 'x = -(+-a)', undefined, [1]), 'x = -+a');
+  assert.equal(run('signs', 'x = -(-+a)', undefined, [1]), 'x = +-a');
+  assert.equal(run('signs', 'y = 1 - (+-a)', undefined, [1, 1]), 'y = 1 -+ a');
 });
 
 test('potência de potência: (x²)^(1/2) = |x|, não x', () => {
