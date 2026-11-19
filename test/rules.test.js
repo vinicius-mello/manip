@@ -675,4 +675,12 @@ test('equação com letra isolada (u = g(v)): k substitui todo u da expressão e
   // a própria equação, na sua aba, não vira g(v) = g(v)
   assert.deepEqual(all('u = 2v + 1', []), []);
   assert.deepEqual(all('x = 3', []), []);
+  // duas abas (u e v isoladas): com o foco em u, só a de u, mesmo quando a
+  // conta numérica não decide se v = √(x − 5) é identidade
+  const two = { A: parseAscii('u = 2x'), B: parseAscii('v = sqrt(x - 5)') };
+  const at = (src, focus) => rule('identity').all({ tree: parseAscii(src), focus, targets: [focus], identities: two, definitions: {} })
+    .map((r) => toAscii(r.tree));
+  assert.deepEqual(at('u + v = 3', [0, 0]), ['2x + v = 3']);
+  assert.deepEqual(at('u + v = 3', [0, 1]), ['u + sqrt(x - 5) = 3']);
+  assert.deepEqual(at('u + v = 3', []), ['2x + v = 3', 'u + sqrt(x - 5) = 3']);
 });
