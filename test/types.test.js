@@ -58,7 +58,7 @@ test('tipos e dimensões', () => inEnv(() => {
 test('matrizes não comutam: movimentos e forma normal', () => inEnv(() => {
   const t = parseAscii('A B = C');
   assert.equal(shiftSideways(parseAscii('A B = B'), [0, 0], +1).error, 'err.noncommute');
-  assert.equal(toAscii(shiftSideways(parseAscii('2A = B'), [0, 0], +1).tree), 'A*2 = B', 'número troca com matriz');
+  assert.equal(toAscii(shiftSideways(parseAscii('2A = B'), [0, 0], +1).tree), 'A = B/2', 'número passa dividindo');
   assert.equal(shiftSideways(t, [0, 1], -1).error, 'err.noncommute');
   assert.equal(shiftSideways(parseAscii('A X = B'), [0, 0], +1).error, 'err.noncommute');
   assert.equal(shiftSideways(parseAscii('A B = A'), [0, 1], +1).error, 'err.matrixMove', 'não passa dividindo');

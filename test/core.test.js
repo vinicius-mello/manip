@@ -75,8 +75,7 @@ test('transposição sem cálculo: 2x + 3 = 7 → x = (7 − 3)/2', () => {
   t = move(t, negThree.id, shiftSideways, +1);
   assert.equal(toAscii(t), '2x = 7 - 3');
   assert.equal(getAt(t, findPath(t, three.id)).id, three.id, 'o 3 mantém o id');
-  t = move(t, two.id, shiftSideways, +1);
-  assert.equal(toAscii(t), 'x*2 = 7 - 3');
+  // Coeficiente numérico: passa direto dividindo (sem "x·2 = 7 − 3").
   t = move(t, two.id, shiftSideways, +1);
   assert.equal(toAscii(t), 'x = (7 - 3)/2');
 });

@@ -43,8 +43,7 @@ test('transposição em inequações respeita o sinal', () => {
   assert.equal(toAscii(t), '2x < -3 + 7', 'termo: mantém');
 
   t = parseAscii('2x < 7');
-  const r = move(t, getAt(t, [0, 0]).id, +1); // 2 → x·2 (troca)
-  const r2 = move(r.tree, getAt(t, [0, 0]).id, +1);
+  const r2 = move(t, getAt(t, [0, 0]).id, +1); // coeficiente: passa direto
   assert.equal(toAscii(r2.tree), 'x < 7/2', 'positivo: mantém');
 
   t = parseAscii('x*(-2) < 7');
@@ -90,7 +89,7 @@ test('estimar: A = B → A ≤ C ou C ≤ B', () => {
 
 test('raiz dos dois lados e ±: (x − 2)² = 6 → x − 2 = ±√6', () => {
   assert.equal(run('sides', '(x - 2)^2 = 6', 'sqrt'), 'sqrt((x - 2)^2) = sqrt(6)');
-  assert.equal(run('sides', 'x^2 < 4', 'sqrt'), 'err.powerIneq');
+  assert.equal(run('sides', 'x^2 < 4', 'sqrt'), 'err.rootIneq');
   assert.equal(run('powers', 'sqrt((x - 2)^2) = sqrt(6)', undefined, [0]), 'abs(x - 2) = sqrt(6)');
   assert.equal(run('abseq', 'abs(x - 2) = sqrt(6)'), 'x - 2 = +-sqrt(6)');
   assert.equal(run('abseq', 'abs(x - 1) = 2 + sqrt(3)'), 'x - 1 = +-(2 + sqrt(3))');
@@ -114,6 +113,33 @@ test('revisão: ×0, ÷0 e ^0 nos dois lados são recusados', () => {
   assert.equal(run('sides', 'x + 1 = 3', '^ 0'), 'err.powZero');
   assert.equal(run('sides', 'x != 2', '* 0'), 'err.zero');
   assert.equal(run('sides', 'x + 1 = 3', '* (1 - 1)'), 'err.zero');
+  // zero disfarçado
+  assert.equal(run('sides', '2x = 4', '* (x - x)'), 'err.zero');
+  assert.equal(run('sides', '2x = 4', '/ (2(x - 1) - 2x + 2)'), 'err.zero');
+  assert.equal(run('sides', '2x = 4', '^ (x - x)'), 'err.powZero');
+});
+
+test('Ctrl+→ no coeficiente numérico passa direto dividindo', async () => {
+  const { shiftSideways } = await import('../src/moves.js');
+  const mv = (src, path, dir) => toAscii(shiftSideways(parseAscii(src), path, dir).tree);
+  assert.equal(mv('2x = 4', [0, 0], +1), 'x = 4/2');
+  assert.equal(mv('4 = 2x', [1, 0], -1), '4/2 = x');
+  assert.equal(mv('a x = b', [0, 0], +1), 'xa = b', 'letra: troca de lugar, como antes');
+});
+
+test('c calcula raízes exatas', () => {
+  assert.equal(run('calc', 'sqrt(9)'), '3');
+  assert.equal(run('calc', 'sqrt(4/9)'), '2/3');
+  assert.equal(run('calc', 'x = sqrt(9)', undefined, [1]), 'x = 3');
+});
+
+test('revisão: por expressão que pode ser 0, o = supõe ≠ 0', async () => {
+  const { msg } = await import('../src/i18n.js');
+  const label = (src, input) => rule('sides').run({ tree: parseAscii(src), focus: [], targets: [[]], input }).label;
+  assert.deepEqual(label('x^2 = 3x', '/ x'), msg('step.assuming', { step: msg('step.sides', { op: '÷', e: 'x' }), e: 'x' }));
+  assert.equal(label('x^2 = 3x', '* x').key, 'step.assuming');
+  assert.equal(label('x^2 = 3x', '/ 2').key, 'step.sides');
+  assert.equal(label('x^2 = 3x', '+ x').key, 'step.sides');
 });
 
 test('revisão: passar fator 0 é recusado; fator que pode ser 0 avisa', async () => {
