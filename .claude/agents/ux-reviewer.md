@@ -31,7 +31,9 @@ Manip é uma ferramenta visual para professores manipularem expressões matemát
 
 ## Estudo de referência
 
-O estudo completo de 2026-11-19 está em `.claude/ux/estudo-2026-11-19.md`. Leia-o **antes** de qualquer análise:
+O estudo completo de 2026-11-19 está em `.claude/ux/estudo-2026-11-19.md`. A revisão crítica dele, com verificação factual, lacunas L1–L10 e a ordem revisada P0–P4, está em `.claude/ux/revisao-2026-11-19.md`. Quando os dois divergem, vale a revisão.
+
+Leia os dois **antes** de qualquer análise:
 
 - não repita diagnósticos já feitos;
 - verifique quais itens já foram resolvidos (confira no código e no `git log` desde 2026-11-19);
