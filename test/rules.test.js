@@ -663,3 +663,16 @@ test('revisão: nenhuma regra troca a variável de ∂ por uma expressão', () =
   const r = RULES.find((x) => x.id === 'addsub');
   assert.equal(r.run({ tree: parseAscii('partial_x (x^2 y)'), focus: [0], targets: [[0]], input: '2' }), null);
 });
+
+test('equação com letra isolada (u = g(v)): k substitui todo u da expressão em foco', () => {
+  const identities = { E: parseAscii('u = 2v + 1') };
+  const all = (src, focus) => rule('identity').all({ tree: parseAscii(src), focus, targets: [focus], identities, definitions: {} })
+    .map((r) => toAscii(r.tree));
+  assert.deepEqual(all('u^2 + u v = 3', []), ['(2v + 1)^2 + (2v + 1)v = 3']);
+  assert.deepEqual(all('u + v = 3', [0]), ['2v + 1 + v = 3']);
+  // a variável de ∫ … du não é o u da equação
+  assert.deepEqual(all('y = int u^2 du + u', []), ['y = int u^2 du + 2v + 1']);
+  // a própria equação, na sua aba, não vira g(v) = g(v)
+  assert.deepEqual(all('u = 2v + 1', []), []);
+  assert.deepEqual(all('x = 3', []), []);
+});
