@@ -31,7 +31,7 @@ test('reticências absorvem as operações termo a termo', () => {
   assert.equal(run('dist', 'x = a(b + ... + c)', [1]), 'x = ab + ... + ac');
   assert.equal(run('dist', 'x = a(b - ... - c)', [1]), 'x = ab - ... - ac');
   assert.equal(run('dist', 'x = (a + ... + c)(x + y)', [1]), 'x = a(x + y) + ... + c(x + y)');
-  assert.equal(run('flipsigns', 'x = -(b + ... + c)', [1]), 'x = -b - ... - c');
+  assert.equal(run('signs', 'x = -(b + ... + c)', [1]), 'x = -b - ... - c');
   assert.equal(run('factor', 'x = a b + ... + a c', [1, 0, 0]), 'x = a(b + ... + c)');
   assert.equal(run('join', 'x = (a + ... + c)/d', [1]), 'x = a/d + ... + c/d');
   assert.equal(run('join', 'x = a/d + ... + c/d', [1]), 'x = (a + ... + c)/d');

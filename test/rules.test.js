@@ -344,32 +344,34 @@ test('pôr em evidência selecionando o fator em cada parcela', () => {
 });
 
 test('trocar os sinais: A(B + C) → −A(−B − C)', () => {
-  assert.equal(run('flipsigns', '2(x - 1) = 4', [0]), '-2(-x + 1) = 4');
-  assert.equal(run('flipsigns', 'a(b + c) = 0', [0]), '-a(-b - c) = 0');
-  assert.equal(run('flipsigns', 'y + 2x(a + b) = 0', [0, 1]), 'y - 2x(-a - b) = 0', 'parcela de uma soma');
-  assert.equal(run('flipsigns', '(-a)(b + c) = 0', [0]), 'a(-b - c) = 0', 'fator já negativo');
-  assert.equal(run('flipsigns', '-a(b + c) = 0', [0, 0]), 'a(-b - c) = 0', 'produto dentro de −(…)');
-  assert.equal(run('flipsigns', '(b + c)x = 0', [0]), '-(-b - c)x = 0', 'soma como primeiro fator');
-  assert.equal(run('flipsigns', 'b + c = 0', [0]), '-(-b - c) = 0', 'soma sozinha');
-  assert.equal(run('flipsigns', 'a b = 0', [0]), null, 'sem soma');
-  assert.equal(run('flipsigns', 'a - (b + c) = 0', [0, 1]), 'a + (-b - c) = 0', 'o sinal entra');
-  assert.equal(run('flipsigns', 'a - (b + c) = 0', [0, 1, 0]), 'a + (-b - c) = 0', 'foco nos parênteses');
-  assert.equal(run('flipsigns', 'a + (-b - c) = 0', [0, 1]), 'a - (b + c) = 0', 'o sinal sai');
-  assert.equal(run('flipsigns', 'y = -(b - c)', [1]), 'y = -b + c', 'fora de uma soma');
-  assert.equal(run('flipsigns', 'a - 2(b + c) = 0', [0, 1]), 'a + 2(-b - c) = 0', 'produto');
-  assert.equal(run('flipsigns', 'y = a - int x dx', [1, 1]), 'y = a + int -x dx', 'o sinal entra na integral');
-  assert.equal(run('flipsigns', 'y = a - int x dx', [1, 1, 0]), 'y = a + int -x dx', 'foco na integral');
-  assert.equal(run('flipsigns', 'y = a + int -x dx', [1, 1]), 'y = a - int x dx', 'o sinal sai da integral');
-  assert.equal(run('flipsigns', 'y = -int_0^1 (x + 1) dx', [1]), 'y = int_0^1 (-x - 1) dx');
-  assert.equal(run('flipsigns', 'y = int (-x - 1) dx', [1]), 'y = -int (x + 1) dx');
-  assert.equal(run('flipsigns', 'y = int x dx', [1]), 'y = -int -x dx', 'sem sinal: troca os dois');
-  assert.equal(run('flipsigns', 'y = a - sum_(k=1)^n k', [1, 1]), 'y = a + sum_(k=1)^n -k', 'o sinal entra no somatório');
-  assert.equal(run('flipsigns', 'y = a + sum_(k=1)^n -k', [1, 1]), 'y = a - sum_(k=1)^n k', 'o sinal sai do somatório');
-  assert.equal(run('flipsigns', 'y = -sum_(k=1)^n (k + 1)', [1]), 'y = sum_(k=1)^n (-k - 1)');
+  assert.equal(run('signs', '2(x - 1) = 4', [0]), '-2(-x + 1) = 4');
+  assert.equal(run('signs', 'a(b + c) = 0', [0]), '-a(-b - c) = 0');
+  assert.equal(run('signs', 'y + 2x(a + b) = 0', [0, 1]), 'y - 2x(-a - b) = 0', 'parcela de uma soma');
+  // fator já negativo: primeiro simplifica, a troca vem no segundo toque
+  assert.deepEqual(rule('signs').all({ tree: parseAscii('(-a)(b + c) = 0'), focus: [0], targets: [[0]] }).map((r) => toAscii(r.tree)).slice(0, 2),
+    ['-a(b + c) = 0', 'a(-b - c) = 0']);
+  assert.equal(run('signs', '-a(b + c) = 0', [0, 0]), 'a(-b - c) = 0', 'produto dentro de −(…)');
+  assert.equal(run('signs', '(b + c)x = 0', [0]), '-(-b - c)x = 0', 'soma como primeiro fator');
+  assert.equal(run('signs', 'b + c = 0', [0]), '-(-b - c) = 0', 'soma sozinha');
+  assert.equal(run('signs', 'a b = 0', [0]), null, 'sem soma');
+  assert.equal(run('signs', 'a - (b + c) = 0', [0, 1]), 'a + (-b - c) = 0', 'o sinal entra');
+  assert.equal(run('signs', 'a - (b + c) = 0', [0, 1, 0]), 'a + (-b - c) = 0', 'foco nos parênteses');
+  assert.equal(run('signs', 'a + (-b - c) = 0', [0, 1]), 'a - (b + c) = 0', 'o sinal sai');
+  assert.equal(run('signs', 'y = -(b - c)', [1]), 'y = -b + c', 'fora de uma soma');
+  assert.equal(run('signs', 'a - 2(b + c) = 0', [0, 1]), 'a + 2(-b - c) = 0', 'produto');
+  assert.equal(run('signs', 'y = a - int x dx', [1, 1]), 'y = a + int -x dx', 'o sinal entra na integral');
+  assert.equal(run('signs', 'y = a - int x dx', [1, 1, 0]), 'y = a + int -x dx', 'foco na integral');
+  assert.equal(run('signs', 'y = a + int -x dx', [1, 1]), 'y = a - int x dx', 'o sinal sai da integral');
+  assert.equal(run('signs', 'y = -int_0^1 (x + 1) dx', [1]), 'y = int_0^1 (-x - 1) dx');
+  assert.equal(run('signs', 'y = int (-x - 1) dx', [1]), 'y = -int (x + 1) dx');
+  assert.equal(run('signs', 'y = int x dx', [1]), 'y = -int -x dx', 'sem sinal: troca os dois');
+  assert.equal(run('signs', 'y = a - sum_(k=1)^n k', [1, 1]), 'y = a + sum_(k=1)^n -k', 'o sinal entra no somatório');
+  assert.equal(run('signs', 'y = a + sum_(k=1)^n -k', [1, 1]), 'y = a - sum_(k=1)^n k', 'o sinal sai do somatório');
+  assert.equal(run('signs', 'y = -sum_(k=1)^n (k + 1)', [1]), 'y = sum_(k=1)^n (-k - 1)');
   // a mesma tecla "-" em sistemas continua subtraindo equações
   const subeq = RULES.find((r) => r.id === 'subeq');
   const tree = parseAscii('x + y = 3; x - y = 1');
-  assert.equal(RULES.find((r) => r.id === 'flipsigns').run({ tree, focus: [1], targets: [[0], [1]] }), null);
+  assert.equal(RULES.find((r) => r.id === 'signs').run({ tree, focus: [1], targets: [[0], [1]] }), null);
   assert.ok(subeq.run({ tree, focus: [1], targets: [[0], [1]] }).tree);
 });
 
