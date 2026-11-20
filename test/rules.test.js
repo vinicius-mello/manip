@@ -711,3 +711,20 @@ test('fração de fração com /: a/(b/c) → ac/b, (a/b)/c → a/(bc), (a/b)/(c
   assert.doesNotMatch(fmt(nf('y = 2/(3/4)').label), /≠ 0/);
   assert.equal(nf('y = a/b'), null);
 });
+
+test('equação do 2º grau com r: x² + px + q = 0 → x = −p/2 ± √(p²/4 − q)', () => {
+  const q = (src) => rule('quadratic').all({ tree: parseAscii(src), focus: [], targets: [[]] }).map((r) => toAscii(r.tree));
+  assert.deepEqual(q('x^2 + 2x - 3 = 0'), ['x = -1 +- sqrt(4)']);
+  assert.deepEqual(q('x^2 + p x + q = 0'), ['x = -p/2 +- sqrt((p^2)/4 - q)']);
+  assert.deepEqual(q('0 = x^2 - 5x + 6'), ['x = 5/2 +- sqrt(1/4)']);
+  assert.deepEqual(q('x^2 - 4 = 0'), ['x = +-sqrt(4)']);
+  assert.deepEqual(q('y^2 + 2y = 0'), ['y = -1 +- sqrt(1)']);
+  // duas letras ao quadrado: x primeiro, depois a
+  assert.equal(q('x^2 - 2a x + a^2 = 0').length, 2);
+  assert.match(q('x^2 - 2a x + a^2 = 0')[1], /^a = /);
+  assert.deepEqual(q('2x^2 + 3x = 0'), [], 'coeficiente de x² diferente de 1');
+  assert.deepEqual(q('x^2 + x^3 = 0'), []);
+  assert.deepEqual(q('x^2 + 2x = 3'), [], 'só com 0 de um lado');
+  const neg = rule('quadratic').run({ tree: parseAscii('x^2 + x + 1 = 0'), focus: [], targets: [[]] });
+  assert.equal(neg.label.key, 'step.quadraticComplex');
+});
