@@ -676,6 +676,11 @@ test('equação com letra isolada (u = g(v)): k substitui todo u da expressão e
   assert.deepEqual(all('y = int u^2 du + u', []), ['y = int u^2 du + 2v + 1']);
   // a própria equação, na sua aba, não vira g(v) = g(v)
   assert.deepEqual(all('u = 2v + 1', []), []);
+  // nem num lado dela: na aba C com B = 0, k em B não dá 0 = 0
+  const self = { C: parseAscii('B = 0') };
+  for (const f of [[], [0], [1]]) {
+    assert.deepEqual(rule('identity').all({ tree: parseAscii('B = 0'), focus: f, targets: [f], identities: self, definitions: {} }), []);
+  }
   assert.deepEqual(all('x = 3', []), []);
   // duas abas (u e v isoladas): com o foco em u, só a de u, mesmo quando a
   // conta numérica não decide se v = √(x − 5) é identidade
