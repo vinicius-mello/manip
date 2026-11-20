@@ -700,3 +700,14 @@ test('Ctrl+← no primeiro fator do numerador o tira da fração; 0 divide por 1
   assert.equal(zero('y = x + 0', [1, 0]), 'y = x', 'neutro primeiro');
   assert.equal(zero('y = x/1', [1]), 'y = x');
 });
+
+test('fração de fração com /: a/(b/c) → ac/b, (a/b)/c → a/(bc), (a/b)/(c/d) → ad/(bc)', () => {
+  const nf = (src, p = [1]) => rule('nestedfrac').run({ tree: parseAscii(src), focus: p, targets: [p] });
+  assert.equal(toAscii(nf('y = a/(b/c)').tree), 'y = (ac)/b');
+  assert.equal(toAscii(nf('y = (a/b)/c').tree), 'y = a/(bc)');
+  assert.equal(toAscii(nf('y = (a/b)/(c/d)').tree), 'y = (ad)/(bc)');
+  assert.equal(toAscii(nf('y = (x+1)/((x-1)/x)').tree), 'y = ((x + 1)x)/(x - 1)');
+  assert.match(fmt(nf('y = a/(b/c)').label), /c ≠ 0/);
+  assert.doesNotMatch(fmt(nf('y = 2/(3/4)').label), /≠ 0/);
+  assert.equal(nf('y = a/b'), null);
+});

@@ -58,7 +58,8 @@ test('teclas das operações: únicas, sem maiúsculas (reservadas aos comandos)
   for (const k of keys) {
     assert.equal(k.length, 1, `tecla de um caractere: ${k}`);
     assert.ok(!/[A-Z]/.test(k), `maiúscula ${k} é comando`);
-    assert.ok(!['[', ']', '\\', '?', ' ', '/'].includes(k), `tecla ${k} é de comando`);
+    // "/" é a busca só dentro do menu do Enter; na fórmula, é a fração de fração.
+    assert.ok(!['[', ']', '\\', '?', ' '].includes(k), `tecla ${k} é de comando`);
   }
 });
 
