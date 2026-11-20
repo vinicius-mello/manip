@@ -733,3 +733,14 @@ test('equação do 2º grau com r: x² + px + q = 0 → x = −p/2 ± √(p²/4 
   const neg = rule('quadratic').run({ tree: parseAscii('x^2 + x + 1 = 0'), focus: [], targets: [[]] });
   assert.equal(neg.label.key, 'step.quadraticComplex');
 });
+
+test('Ctrl+← num fator (−1) no início: nega a expressão (ou a fração)', async () => {
+  const { shiftSideways } = await import('../src/moves.js');
+  const move = (src, p) => toAscii(shiftSideways(parseAscii(src), p, -1).tree);
+  assert.equal(move('y = (-1)a/b', [1, 0, 0]), 'y = -a/b');
+  assert.equal(move('y = a/((-1)b)', [1, 1, 0]), 'y = -a/b');
+  assert.equal(move('y = (-1)a', [1, 0]), 'y = -a', 'antes de passar para o outro lado');
+  assert.equal(move('y = x + (-1)a b', [1, 1, 0]), 'y = x - ab');
+  assert.equal(move('y = (-1)/b', [1, 0]), 'y = -1/b');
+  assert.equal(move('y = -((-1)a)', [1, 0, 0, 0]), 'y = a', 'os dois sinais cancelam');
+});
