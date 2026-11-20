@@ -684,3 +684,17 @@ test('equação com letra isolada (u = g(v)): k substitui todo u da expressão e
   assert.deepEqual(at('u + v = 3', [0, 1]), ['u + sqrt(x - 5) = 3']);
   assert.deepEqual(at('u + v = 3', []), ['2x + v = 3', 'u + sqrt(x - 5) = 3']);
 });
+
+test('Ctrl+← no primeiro fator do numerador o tira da fração; 0 divide por 1', async () => {
+  const { shiftSideways } = await import('../src/moves.js');
+  const move = (src, p) => toAscii(shiftSideways(parseAscii(src), p, -1).tree);
+  assert.equal(move('y = (2x)/3', [1, 0, 0]), 'y = 2(x/3)');
+  assert.equal(move('y = (a b c)/d', [1, 0, 0]), 'y = a((bc)/d)');
+  assert.equal(move('y = x/3', [1, 0]), 'y = x(1/3)');
+  assert.equal(move('y = k (a b / d)', [1, 1, 0, 0, 0]), 'y = ka(b/d)');
+  assert.equal(shiftSideways(parseAscii('y = 1/3'), [1, 0], -1), null);
+  const zero = (src, p) => toAscii(rule('neutral').run({ tree: parseAscii(src), focus: p, targets: [p] }).tree);
+  assert.equal(zero('y = x + 2', [1, 0]), 'y = x/1 + 2');
+  assert.equal(zero('y = x + 0', [1, 0]), 'y = x', 'neutro primeiro');
+  assert.equal(zero('y = x/1', [1]), 'y = x');
+});
